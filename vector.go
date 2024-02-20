@@ -11,6 +11,20 @@ type Vector struct {
 	Z float64
 }
 
+// Construct a Vector from its components.
+func NewVector(x, y, z float64) Vector {
+	return Vector{x, y, z}
+}
+
+// Construct a Vector from an array.
+func NewVectorFromArray(values [3]float64) Vector {
+	return Vector{
+		X: values[0],
+		Y: values[1],
+		Z: values[2],
+	}
+}
+
 // Compute the magnitude (L2-norm).
 func (v Vector) Mag() float64 {
 	return math.Sqrt(v.Dot(v))
