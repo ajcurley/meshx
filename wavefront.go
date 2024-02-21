@@ -1,4 +1,4 @@
-package exchange
+package meshx
 
 import (
 	"bufio"
@@ -13,8 +13,6 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
-
-	"github.com/ajcurley/meshx"
 )
 
 const (
@@ -32,7 +30,7 @@ var (
 // and GZIP ASCII files.
 type OBJReader struct {
 	reader      io.Reader
-	vertices    []meshx.Vector
+	vertices    []Vector
 	faces       []int
 	faceOffsets []int
 	facePatches []int
@@ -43,7 +41,7 @@ type OBJReader struct {
 func NewOBJReader(reader io.Reader) *OBJReader {
 	return &OBJReader{
 		reader:      reader,
-		vertices:    make([]meshx.Vector, 0),
+		vertices:    make([]Vector, 0),
 		faces:       make([]int, 0),
 		faceOffsets: make([]int, 0),
 		facePatches: make([]int, 0),
@@ -144,7 +142,7 @@ func (r *OBJReader) parseVertex(data []byte) error {
 		values[i] = value
 	}
 
-	vertex := meshx.NewVectorFromArray(values)
+	vertex := NewVectorFromArray(values)
 	r.vertices = append(r.vertices, vertex)
 
 	return nil
@@ -187,7 +185,7 @@ func (r *OBJReader) parseGroup(data []byte) {
 }
 
 // Get a vertex by index.
-func (r *OBJReader) GetVertex(index int) meshx.Vector {
+func (r *OBJReader) GetVertex(index int) Vector {
 	return r.vertices[index]
 }
 
