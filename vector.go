@@ -141,3 +141,8 @@ func (v Vector) IntersectsAABB(query AABB) bool {
 
 	return true
 }
+
+// Impement the IntersectsSphere interface.
+func (v Vector) IntersectsSphere(query Sphere) bool {
+	return query.Center.Sub(v).Mag() <= query.Radius * query.Radius
+}
