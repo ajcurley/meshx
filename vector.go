@@ -125,3 +125,16 @@ func (v Vector) Cross(w Vector) Vector {
 		Z: v.X*w.Y - v.Y*w.X,
 	}
 }
+
+// Implement the IntersectsAABB interface.
+func (v Vector) IntersectsAABB(query AABB) bool {
+	minBound := query.GetMinBound()
+	maxBound := query.GetMaxBound()
+
+	return v.X >= minBound.X &&
+		v.X <= maxBound.X &&
+		v.Y >= minBound.Y &&
+		v.Y <= maxBound.Y &&
+		v.Z >= minBound.Y &&
+		v.Z <= maxBound.Y
+}
