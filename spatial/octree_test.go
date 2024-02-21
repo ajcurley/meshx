@@ -39,7 +39,6 @@ func TestOctreeBuildVector(t *testing.T) {
 
 	for i := 0; i < len(triangles); i++ {
 		if err := octree.Insert(triangles[i]); err != nil {
-			fmt.Println(i)
 			t.Fatal(err)
 		}
 	}

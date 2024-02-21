@@ -1,9 +1,5 @@
 package meshx
 
-import (
-//"math"
-)
-
 // Ray in three-dimensional Cartesian space.
 type Ray struct {
 	Origin    Vector
