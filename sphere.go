@@ -15,3 +15,8 @@ func NewSphere(center Vector, radius float64) Sphere {
 func (s Sphere) IntersectsAABB(query AABB) bool {
 	panic("not implemented")
 }
+
+// Implement the IntersectsTriangle interface.
+func (s Sphere) IntersectsTriangle(query Triangle) bool {
+	panic("not implemented")
+}

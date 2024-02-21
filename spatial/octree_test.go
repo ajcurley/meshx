@@ -51,10 +51,11 @@ func TestOctreeBuildVector(t *testing.T) {
 	fmt.Printf("Number of nodes:    %d\n", octree.GetNumberOfNodes())
 
 	start = time.Now()
-	results := octree.Query(aabb)
-	elapsed = time.Now().Sub(start).Milliseconds()
+	ray := meshx.NewRay(meshx.Vector{0, 0, -1}, meshx.Vector{0, 0, 1})
+	results := octree.Query(ray)
+	elapsed = time.Now().Sub(start).Microseconds()
 
 	fmt.Println("")
-	fmt.Printf("Octree query (ms):  %d\n", elapsed)
+	fmt.Printf("Octree query (us):  %d\n", elapsed)
 	fmt.Printf("Number of items:    %d\n", len(results))
 }

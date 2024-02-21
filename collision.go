@@ -4,6 +4,10 @@ type IntersectsAABB interface {
 	IntersectsAABB(AABB) bool
 }
 
+type IntersectsRay interface {
+	IntersectsRay(Ray) bool
+}
+
 type IntersectsSphere interface {
 	IntersectsSphere(Sphere) bool
 }

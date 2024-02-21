@@ -155,3 +155,8 @@ func (t Triangle) IntersectsAABB(query AABB) bool {
 
 	return s-e <= 0 && s+e >= 0
 }
+
+// Implement the IntersectsRay interface.
+func (t Triangle) IntersectsRay(query Ray) bool {
+	return query.IntersectsTriangle(t)
+}

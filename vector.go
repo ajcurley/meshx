@@ -32,6 +32,15 @@ func (v Vector) Unit() Vector {
 	}
 }
 
+// Compute the inverse.
+func (v Vector) Inv() Vector {
+	return Vector{
+		1 / v[0],
+		1 / v[1],
+		1 / v[2],
+	}
+}
+
 // Compute the absolute vector.
 func (v Vector) Abs() Vector {
 	return Vector{
@@ -144,5 +153,5 @@ func (v Vector) IntersectsAABB(query AABB) bool {
 
 // Impement the IntersectsSphere interface.
 func (v Vector) IntersectsSphere(query Sphere) bool {
-	return query.Center.Sub(v).Mag() <= query.Radius * query.Radius
+	return query.Center.Sub(v).Mag() <= query.Radius*query.Radius
 }
