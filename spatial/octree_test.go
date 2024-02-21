@@ -35,7 +35,6 @@ func TestOctreeBuildVector(t *testing.T) {
 	start := time.Now()
 
 	aabb := meshx.NewAABBFromVectors(vertices).Buffer(0.01)
-	//aabb := meshx.NewAABB(meshx.Vector{0, 0, 0}, meshx.Vector{4, 4, 4})
 	octree := NewOctree(aabb)
 
 	for i := 0; i < len(triangles); i++ {
@@ -50,4 +49,12 @@ func TestOctreeBuildVector(t *testing.T) {
 	fmt.Printf("Octree built (ms):  %d\n", elapsed)
 	fmt.Printf("Number of items:    %d\n", octree.GetNumberOfItems())
 	fmt.Printf("Number of nodes:    %d\n", octree.GetNumberOfNodes())
+
+	start = time.Now()
+	results := octree.Query(aabb)
+	elapsed = time.Now().Sub(start).Milliseconds()
+
+	fmt.Println("")
+	fmt.Printf("Octree query (ms):  %d\n", elapsed)
+	fmt.Printf("Number of items:    %d\n", len(results))
 }

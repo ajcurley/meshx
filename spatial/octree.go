@@ -99,7 +99,52 @@ func (o *Octree) Split(code uint64) error {
 
 // Query the octree for intersection items.
 func (o *Octree) Query(query meshx.IntersectsAABB) []int {
-	panic("not implemented")
+	var code uint64
+
+	cache := make([]bool, o.GetNumberOfItems())
+	items := make([]int, 0)
+	queue := make([]uint64, 1, 128)
+	queue[0] = 1
+
+	for len(queue) > 0 {
+		code, queue = queue[0], queue[1:]
+		node := o.nodes[code]
+
+		if query.IntersectsAABB(node.aabb) {
+			if node.isLeaf {
+				for _, index := range node.items {
+					if !cache[index] {
+						var intersects bool
+
+						switch value := query.(type) {
+						case meshx.AABB:
+							if item, ok := o.items[index].(meshx.IntersectsAABB); ok {
+								intersects = item.IntersectsAABB(value)
+							}
+						case meshx.Sphere:
+							if item, ok := o.items[index].(meshx.IntersectsSphere); ok {
+								intersects = item.IntersectsSphere(value)
+							}
+						case meshx.Triangle:
+							if item, ok := o.items[index].(meshx.IntersectsTriangle); ok {
+								intersects = item.IntersectsTriangle(value)
+							}
+						}
+
+						if intersects {
+							cache[index] = true
+							items = append(items, index)
+						}
+					}
+				}
+			} else {
+				children := node.Children()
+				queue = append(queue, children...)
+			}
+		}
+	}
+
+	return items
 }
 
 // Get the number of indexed items.
