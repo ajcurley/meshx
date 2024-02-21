@@ -33,9 +33,9 @@ func NewOctree(aabb meshx.AABB) *Octree {
 func (o *Octree) Insert(item meshx.IntersectsAABB) error {
 	var code uint64
 
-	codes := []uint64{}
-	queue := []uint64{1}
-	index := len(o.items)
+	codes := make([]uint64, 0, 8)
+	queue := make([]uint64, 1, 128)
+	queue[0] = 1
 
 	for len(queue) > 0 {
 		code, queue = queue[0], queue[1:]
@@ -55,6 +55,7 @@ func (o *Octree) Insert(item meshx.IntersectsAABB) error {
 		return ErrOctreeItemNotInserted
 	}
 
+	index := len(o.items)
 	o.items = append(o.items, item)
 
 	for _, code := range codes {
@@ -99,6 +100,16 @@ func (o *Octree) Split(code uint64) error {
 // Query the octree for intersection items.
 func (o *Octree) Query(query meshx.IntersectsAABB) []int {
 	panic("not implemented")
+}
+
+// Get the number of indexed items.
+func (o *Octree) GetNumberOfItems() int {
+	return len(o.items)
+}
+
+// Get the number of nodes.
+func (o *Octree) GetNumberOfNodes() int {
+	return len(o.nodes)
 }
 
 type OctreeNode struct {

@@ -7,6 +7,11 @@ type Triangle struct {
 	R Vector
 }
 
+// Construct a Triangle from its vertices.
+func NewTriangle(p, q, r Vector) Triangle {
+	return Triangle{p, q, r}
+}
+
 // Compute the area.
 func (t Triangle) Area() float64 {
 	u := t.Q.Sub(t.P)

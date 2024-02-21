@@ -5,10 +5,21 @@ import (
 )
 
 // Cartesian vector in three-dimensional space.
-type Vector struct {
-	X float64
-	Y float64
-	Z float64
+type Vector [3]float64
+
+// Get the X component.
+func (v Vector) X() float64 {
+	return v[0]
+}
+
+// Get the Y component.
+func (v Vector) Y() float64 {
+	return v[1]
+}
+
+// Get the Z component.
+func (v Vector) Z() float64 {
+	return v[2]
 }
 
 // Construct a Vector from its components.
@@ -18,11 +29,7 @@ func NewVector(x, y, z float64) Vector {
 
 // Construct a Vector from an array.
 func NewVectorFromArray(values [3]float64) Vector {
-	return Vector{
-		X: values[0],
-		Y: values[1],
-		Z: values[2],
-	}
+	return Vector(values)
 }
 
 // Compute the magnitude (L2-norm).
@@ -34,107 +41,109 @@ func (v Vector) Mag() float64 {
 func (v Vector) Unit() Vector {
 	mag := v.Mag()
 	return Vector{
-		X: v.X / mag,
-		Y: v.Y / mag,
-		Z: v.Z / mag,
+		v.X() / mag,
+		v.Y() / mag,
+		v.Z() / mag,
 	}
 }
 
 // Add two vectors v + w.
 func (v Vector) Add(w Vector) Vector {
 	return Vector{
-		X: v.X + w.X,
-		Y: v.Y + w.Y,
-		Z: v.Z + w.Z,
+		v.X() + w.X(),
+		v.Y() + w.Y(),
+		v.Z() + w.Z(),
 	}
 }
 
 // Add a scalar to a vector.
 func (v Vector) AddScalar(s float64) Vector {
 	return Vector{
-		X: v.X + s,
-		Y: v.Y + s,
-		Z: v.Z + s,
+		v.X() + s,
+		v.Y() + s,
+		v.Z() + s,
 	}
 }
 
 // Subtract two vectors v - w.
 func (v Vector) Sub(w Vector) Vector {
 	return Vector{
-		X: v.X - w.X,
-		Y: v.Y - w.Y,
-		Z: v.Z - w.Z,
+		v.X() - w.X(),
+		v.Y() - w.Y(),
+		v.Z() - w.Z(),
 	}
 }
 
 // Subtract a scalar from a vector.
 func (v Vector) SubScalar(s float64) Vector {
 	return Vector{
-		X: v.X - s,
-		Y: v.Y - s,
-		Z: v.Z - s,
+		v.X() - s,
+		v.Y() - s,
+		v.Z() - s,
 	}
 }
 
 // Multiply two vectors element-wise v * w.
 func (v Vector) Mul(w Vector) Vector {
 	return Vector{
-		X: v.X * w.X,
-		Y: v.Y * w.Y,
-		Z: v.Z * w.Z,
+		v.X() * w.X(),
+		v.Y() * w.Y(),
+		v.Z() * w.Z(),
 	}
 }
 
 // Multiply a scalar by a vector.
 func (v Vector) MulScalar(s float64) Vector {
 	return Vector{
-		X: v.X * s,
-		Y: v.Y * s,
-		Z: v.Z * s,
+		v.X() * s,
+		v.Y() * s,
+		v.Z() * s,
 	}
 }
 
 // Divide two vectors element-wise v / w.
 func (v Vector) Div(w Vector) Vector {
 	return Vector{
-		X: v.X / w.X,
-		Y: v.Y / w.Y,
-		Z: v.Z / w.Z,
+		v.X() / w.X(),
+		v.Y() / w.Y(),
+		v.Z() / w.Z(),
 	}
 }
 
 // Divide a vector by a scalar.
 func (v Vector) DivScalar(s float64) Vector {
 	return Vector{
-		X: v.X / s,
-		Y: v.Y / s,
-		Z: v.Z / s,
+		v.X() / s,
+		v.Y() / s,
+		v.Z() / s,
 	}
 }
 
 // Compute the dot product v * w.
 func (v Vector) Dot(w Vector) float64 {
-	return v.X*w.X + v.Y*w.Y + v.Z*w.Z
+	return v.X()*w.X() + v.Y()*w.Y() + v.Z()*w.Z()
 }
 
 // Compute the cross product v x w.
 func (v Vector) Cross(w Vector) Vector {
 	return Vector{
-		X: v.Y*w.Z - v.Z*w.Y,
-		Y: v.Z*w.X - v.X*w.Z,
-		Z: v.X*w.Y - v.Y*w.X,
+		v.Y()*w.Z() - v.Z()*w.Y(),
+		v.Z()*w.X() - v.X()*w.Z(),
+		v.X()*w.Y() - v.Y()*w.X(),
 	}
 }
 
 // Implement the IntersectsAABB interface.
 func (v Vector) IntersectsAABB(query AABB) bool {
-	minBound := query.GetMinBound()
-	maxBound := query.GetMaxBound()
+	for i := 0; i < 3; i++ {
+		if v[i] < query.Center[i]-query.HalfSize[i] {
+			return false
+		}
 
-	return v.X >= minBound.X &&
-		v.X <= maxBound.X &&
-		v.Y >= minBound.Y &&
-		v.Y <= maxBound.Y &&
-		v.Z >= minBound.Y &&
-		v.Z <= maxBound.Y
+		if v[i] > query.Center[i]+query.HalfSize[i] {
+			return false
+		}
+	}
+
+	return true
 }
