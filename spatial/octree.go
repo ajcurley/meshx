@@ -91,7 +91,7 @@ func (o *Octree) Split(code uint64) error {
 		o.nodes[childCode] = childNode
 	}
 
-	clear(node.items)
+	node.items = nil
 	node.isLeaf = false
 
 	return nil

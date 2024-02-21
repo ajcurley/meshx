@@ -63,21 +63,21 @@ func (a AABB) Octant(octant int) AABB {
 	center := a.Center
 
 	if octant&4 == 4 {
-		center[0] += halfSize.X()
+		center[0] += halfSize[0]
 	} else {
-		center[0] -= halfSize.X()
+		center[0] -= halfSize[0]
 	}
 
 	if octant&2 == 2 {
-		center[1] += halfSize.Y()
+		center[1] += halfSize[1]
 	} else {
-		center[1] -= halfSize.Y()
+		center[1] -= halfSize[1]
 	}
 
 	if octant&1 == 1 {
-		center[2] += halfSize.Z()
+		center[2] += halfSize[2]
 	} else {
-		center[2] -= halfSize.Z()
+		center[2] -= halfSize[2]
 	}
 
 	return AABB{center, halfSize}
@@ -90,10 +90,10 @@ func (a AABB) IntersectsAABB(query AABB) bool {
 	qMin := query.GetMinBound()
 	qMax := query.GetMaxBound()
 
-	return aMin.X() <= qMax.X() &&
-		aMax.X() >= qMin.X() &&
-		aMin.Y() <= qMax.Y() &&
-		aMax.Y() >= qMin.Y() &&
-		aMin.Z() <= qMax.Z() &&
-		aMax.Z() >= qMin.Z()
+	return aMin[0] <= qMax[0] &&
+		aMax[0] >= qMin[0] &&
+		aMin[1] <= qMax[1] &&
+		aMax[1] >= qMin[1] &&
+		aMin[2] <= qMax[2] &&
+		aMax[2] >= qMin[2]
 }
