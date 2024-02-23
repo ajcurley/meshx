@@ -64,6 +64,7 @@ func ReadOBJFromPath(path string) (*OBJReader, error) {
 		if err != nil {
 			return nil, err
 		}
+		defer gzipFile.Close()
 		reader = gzipFile
 	} else {
 		reader = file
@@ -229,4 +230,86 @@ func (r *OBJReader) GetPatch(index int) string {
 // Get the number of patches.
 func (r *OBJReader) GetNumberOfPatches() int {
 	return len(r.patches)
+}
+
+// OBJReader manages writing an OBJ (WaveFront) file.
+type OBJWriter struct {
+	writer      io.Writer
+	vertices    []Vector
+	faces       [][]int
+	facePatches []int
+	patches     []string
+}
+
+// Construct an OBJWriter from an io.Writer interface.
+func NewOBJWriter(writer io.Writer) *OBJWriter {
+	return &OBJWriter{
+		writer:      writer,
+		vertices:    make([]Vector, 0),
+		faces:       make([][]int, 0),
+		facePatches: make([]int, 0),
+		patches:     make([]string, 0),
+	}
+}
+
+// Set the vertices to write.
+func (w *OBJWriter) SetVertices(vertices []Vector) {
+	w.vertices = vertices
+}
+
+// Set the faces to write.
+func (w *OBJWriter) SetFaces(faces [][]int) {
+	w.faces = faces
+}
+
+// Set the face patches to write.
+func (w *OBJWriter) SetFacePatches(facePatches []int) {
+	w.facePatches = facePatches
+}
+
+// Set the patches to write.
+func (w *OBJWriter) SetPatches(patches []string) {
+	w.patches = patches
+}
+
+// Write the data to the io.Writer interface.
+func (w *OBJWriter) Write() error {
+	var line string
+	writer := bufio.NewWriter(w.writer)
+	patchFaces := make(map[int][]int)
+
+	for i, patch := range w.facePatches {
+		if faces, ok := patchFaces[patch]; ok {
+			patchFaces[patch] = append(faces, i)
+		} else {
+			patchFaces[patch] = []int{i}
+		}
+	}
+
+	for _, vertex := range w.vertices {
+		line = fmt.Sprintf("v %f %f %f\n", vertex[0], vertex[1], vertex[2])
+		if _, err := writer.WriteString(line); err != nil {
+			return err
+		}
+	}
+
+	for patch := range w.patches {
+		line = fmt.Sprintf("g %s\n", w.patches[patch])
+		if _, err := writer.WriteString(line); err != nil {
+			return err
+		}
+
+		for _, face := range patchFaces[patch] {
+			writer.WriteString("f")
+
+			for _, vertex := range w.faces[face] {
+				entry := fmt.Sprintf(" %d", vertex+1)
+				writer.WriteString(entry)
+			}
+
+			writer.WriteString("\n")
+		}
+	}
+
+	return writer.Flush()
 }

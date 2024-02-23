@@ -1,7 +1,11 @@
 package halfedge
 
 import (
+	"compress/gzip"
 	"io"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/ajcurley/meshx"
 )
@@ -15,28 +19,28 @@ type HalfEdgeMesh struct {
 }
 
 // Construct a HalfEdgeMesh from a MeshReader.
-func NewHalfEdgeMesh(meshReader meshx.MeshReader) (*HalfEdgeMesh, error) {
+func NewHalfEdgeMesh(source meshx.Mesh) (*HalfEdgeMesh, error) {
 	mesh := HalfEdgeMesh{
-		vertices:  make([]Vertex, meshReader.GetNumberOfVertices()),
-		faces:     make([]Face, meshReader.GetNumberOfFaces()),
-		halfEdges: make([]HalfEdge, meshReader.GetNumberOfFaceEdges()),
-		patches:   make([]Patch, meshReader.GetNumberOfPatches()),
+		vertices:  make([]Vertex, source.GetNumberOfVertices()),
+		faces:     make([]Face, source.GetNumberOfFaces()),
+		halfEdges: make([]HalfEdge, source.GetNumberOfFaceEdges()),
+		patches:   make([]Patch, source.GetNumberOfPatches()),
 	}
 
-	for i := range meshReader.GetNumberOfPatches() {
-		mesh.patches[i] = Patch{meshReader.GetPatch(i)}
+	for i := range source.GetNumberOfPatches() {
+		mesh.patches[i] = Patch{source.GetPatch(i)}
 	}
 
-	for i := range meshReader.GetNumberOfVertices() {
-		mesh.vertices[i] = Vertex{meshReader.GetVertex(i), -1}
+	for i := range source.GetNumberOfVertices() {
+		mesh.vertices[i] = Vertex{source.GetVertex(i), -1}
 	}
 
 	var nHalfEdges int
 	sharedEdges := make(map[[2]int]int)
 
-	for i := range meshReader.GetNumberOfFaces() {
-		face := meshReader.GetFace(i)
-		facePatch := meshReader.GetFacePatch(i)
+	for i := range source.GetNumberOfFaces() {
+		face := source.GetFace(i)
+		facePatch := source.GetFacePatch(i)
 		mesh.faces[i] = Face{nHalfEdges, facePatch}
 
 		for j, vertex := range face {
@@ -78,22 +82,72 @@ func NewHalfEdgeMesh(meshReader meshx.MeshReader) (*HalfEdgeMesh, error) {
 
 // Construct a HalfEdgeMesh from an OBJ file reader.
 func NewHalfEdgeMeshFromOBJ(reader io.Reader) (*HalfEdgeMesh, error) {
-	meshReader := meshx.NewOBJReader(reader)
+	source := meshx.NewOBJReader(reader)
 
-	if err := meshReader.Read(); err != nil {
+	if err := source.Read(); err != nil {
 		return nil, err
 	}
 
-	return NewHalfEdgeMesh(meshReader)
+	return NewHalfEdgeMesh(source)
 }
 
 // Construct a HalfEdgeMesh from an OBJ file path.
 func NewHalfEdgeMeshFromOBJPath(path string) (*HalfEdgeMesh, error) {
-	meshReader, err := meshx.ReadOBJFromPath(path)
+	source, err := meshx.ReadOBJFromPath(path)
 	if err != nil {
 		return nil, err
 	}
-	return NewHalfEdgeMesh(meshReader)
+	return NewHalfEdgeMesh(source)
+}
+
+// Write the HalfEdgeMesh to an OBJ file.
+func (m *HalfEdgeMesh) WriteOBJ(writer io.Writer) error {
+	vertices := make([]meshx.Vector, m.GetNumberOfVertices())
+	faces := make([][]int, m.GetNumberOfFaces())
+	facePatches := make([]int, m.GetNumberOfFaces())
+	patches := make([]string, m.GetNumberOfPatches())
+
+	for i := range m.GetNumberOfPatches() {
+		patches[i] = m.patches[i].Name
+	}
+
+	for i := range m.GetNumberOfVertices() {
+		vertices[i] = m.vertices[i].Point
+	}
+
+	for i := range m.GetNumberOfFaces() {
+		faces[i] = m.GetFaceVertices(i)
+		facePatches[i] = m.faces[i].Patch
+	}
+
+	objWriter := meshx.NewOBJWriter(writer)
+	objWriter.SetVertices(vertices)
+	objWriter.SetFaces(faces)
+	objWriter.SetFacePatches(facePatches)
+	objWriter.SetPatches(patches)
+
+	return objWriter.Write()
+}
+
+// Write the HalfEdgeMesh to an OBJ file path.
+func (m *HalfEdgeMesh) WriteOBJPath(path string) error {
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	var writer io.Writer
+
+	if strings.ToLower(filepath.Ext(path)) == ".gz" {
+		gzipFile := gzip.NewWriter(file)
+		defer gzipFile.Close()
+		writer = gzipFile
+	} else {
+		writer = file
+	}
+
+	return m.WriteOBJ(writer)
 }
 
 // Get the number of vertices.

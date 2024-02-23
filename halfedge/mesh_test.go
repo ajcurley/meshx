@@ -25,4 +25,10 @@ func TestNewHalfEdgeMeshFromOBJPath(t *testing.T) {
 	mesh.Orient()
 
 	fmt.Printf("Is consistent (after): %v\n", mesh.IsConsistent())
+
+	start = time.Now()
+	mesh.WriteOBJPath("/Users/acurley/Desktop/mesh.obj")
+	elapsed = time.Now().Sub(start).Milliseconds()
+
+	fmt.Printf("Written (ms):          %d\n", elapsed)
 }
