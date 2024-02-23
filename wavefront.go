@@ -216,6 +216,11 @@ func (r *OBJReader) GetNumberOfFaces() int {
 	return len(r.faceOffsets)
 }
 
+// Get the number of face edges.
+func (r *OBJReader) GetNumberOfFaceEdges() int {
+	return len(r.faces)
+}
+
 // Get a patch by index.
 func (r *OBJReader) GetPatch(index int) string {
 	return r.patches[index]
