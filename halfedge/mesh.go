@@ -383,10 +383,50 @@ func (m *HalfEdgeMesh) checkFaceOrientation(source, target int) bool {
 
 // Merge two meshes together (in place).
 func (m *HalfEdgeMesh) Merge(n *HalfEdgeMesh) {
-	panic("not implemented")
+	offsetVertex := m.GetNumberOfVertices()
+	offsetFace := m.GetNumberOfFaces()
+	offsetHalfEdge := m.GetNumberOfHalfEdges()
+	offsetPatch := m.GetNumberOfPatches()
+
+	for _, vertex := range n.vertices {
+		m.vertices = append(m.vertices, vertex)
+	}
+
+	for _, face := range n.faces {
+		face.HalfEdge += offsetHalfEdge
+		face.Patch += offsetPatch
+		m.faces = append(m.faces, face)
+	}
+
+	for _, halfEdge := range n.halfEdges {
+		halfEdge.Origin += offsetVertex
+		halfEdge.Face += offsetFace
+		halfEdge.Next += offsetHalfEdge
+		halfEdge.Prev += offsetHalfEdge
+
+		if !halfEdge.IsBoundary() {
+			halfEdge.Twin += offsetHalfEdge
+		}
+
+		m.halfEdges = append(m.halfEdges, halfEdge)
+	}
+
+	for _, patch := range n.patches {
+		m.patches = append(m.patches, patch)
+	}
 }
 
 // Extract the faces into a new mesh.
 func (m *HalfEdgeMesh) Extract(faces []int) *HalfEdgeMesh {
 	panic("not implemented")
+}
+
+// Translate the mesh by a Vector.
+func (m *HalfEdgeMesh) Translate(offset meshx.Vector) {
+	for i, vertex := range m.vertices {
+		m.vertices[i] = Vertex{
+			Point:    vertex.Point.Add(offset),
+			HalfEdge: vertex.HalfEdge,
+		}
+	}
 }

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/ajcurley/meshx"
 )
 
 func TestNewHalfEdgeMeshFromOBJPath(t *testing.T) {
@@ -25,6 +27,10 @@ func TestNewHalfEdgeMeshFromOBJPath(t *testing.T) {
 	mesh.Orient()
 
 	fmt.Printf("Is consistent (after): %v\n", mesh.IsConsistent())
+
+	mesh2, _ := NewHalfEdgeMeshFromOBJPath(path)
+	mesh2.Translate(meshx.Vector{10, 0, 0})
+	mesh.Merge(mesh2)
 
 	start = time.Now()
 	mesh.WriteOBJPath("/Users/acurley/Desktop/mesh.obj")
