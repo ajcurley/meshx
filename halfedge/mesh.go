@@ -418,7 +418,70 @@ func (m *HalfEdgeMesh) Merge(n *HalfEdgeMesh) {
 
 // Extract the faces into a new mesh.
 func (m *HalfEdgeMesh) Extract(faces []int) *HalfEdgeMesh {
-	panic("not implemented")
+	indexVertices := make(map[int]int)
+	indexFaces := make(map[int]int)
+	indexHalfEdges := make(map[int]int)
+	indexPatches := make(map[int]int)
+
+	for newIndex, oldIndex := range faces {
+		indexFaces[oldIndex] = newIndex
+
+		for _, vertex := range m.GetFaceVertices(oldIndex) {
+			if _, ok := indexVertices[vertex]; !ok {
+				indexVertices[vertex] = len(indexVertices)
+			}
+		}
+
+		for _, halfEdge := range m.GetFaceHalfEdges(oldIndex) {
+			if _, ok := indexHalfEdges[halfEdge]; !ok {
+				indexHalfEdges[halfEdge] = len(indexHalfEdges)
+			}
+		}
+
+		if face := m.GetFace(oldIndex); face.Patch != -1 {
+			if _, ok := indexPatches[face.Patch]; !ok {
+				indexPatches[face.Patch] = len(indexPatches)
+			}
+		}
+	}
+
+	mesh := HalfEdgeMesh{
+		vertices:  make([]Vertex, len(indexVertices)),
+		faces:     make([]Face, len(faces)),
+		halfEdges: make([]HalfEdge, len(indexHalfEdges)),
+		patches:   make([]Patch, len(indexPatches)),
+	}
+
+	for oldIndex, newIndex := range indexPatches {
+		mesh.patches[newIndex] = m.patches[oldIndex]
+	}
+
+	for oldIndex, newIndex := range indexVertices {
+		mesh.vertices[newIndex] = m.vertices[oldIndex]
+	}
+
+	for oldIndex, newIndex := range indexHalfEdges {
+		halfEdge := m.halfEdges[oldIndex]
+		halfEdge.Origin = indexVertices[halfEdge.Origin]
+		halfEdge.Face = -1
+		halfEdge.Next = indexHalfEdges[halfEdge.Next]
+		halfEdge.Prev = indexHalfEdges[halfEdge.Prev]
+
+		if !halfEdge.IsBoundary() {
+			halfEdge.Twin = indexHalfEdges[halfEdge.Twin]
+		}
+
+		mesh.halfEdges[newIndex] = halfEdge
+	}
+
+	for newIndex, oldIndex := range faces {
+		face := m.faces[oldIndex]
+		face.Patch = indexPatches[face.Patch]
+		face.HalfEdge = indexHalfEdges[face.HalfEdge]
+		mesh.faces[newIndex] = face
+	}
+
+	return &mesh
 }
 
 // Translate the mesh by a Vector.

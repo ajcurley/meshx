@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"testing"
 	"time"
-
-	"github.com/ajcurley/meshx"
+	//"github.com/ajcurley/meshx"
 )
 
 func TestNewHalfEdgeMeshFromOBJPath(t *testing.T) {
@@ -28,12 +27,18 @@ func TestNewHalfEdgeMeshFromOBJPath(t *testing.T) {
 
 	fmt.Printf("Is consistent (after): %v\n", mesh.IsConsistent())
 
-	mesh2, _ := NewHalfEdgeMeshFromOBJPath(path)
-	mesh2.Translate(meshx.Vector{10, 0, 0})
-	mesh.Merge(mesh2)
+	faces := make([]int, 0)
+	for i := 0; i < mesh.GetNumberOfFaces(); i++ {
+		face := mesh.GetFace(i)
+		if face.Patch == 0 {
+			faces = append(faces, i)
+		}
+	}
+
+	mesh2 := mesh.Extract(faces)
 
 	start = time.Now()
-	mesh.WriteOBJPath("/Users/acurley/Desktop/mesh.obj")
+	mesh2.WriteOBJPath("/Users/acurley/Desktop/mesh.obj")
 	elapsed = time.Now().Sub(start).Milliseconds()
 
 	fmt.Printf("Written (ms):          %d\n", elapsed)
