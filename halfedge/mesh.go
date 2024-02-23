@@ -276,6 +276,26 @@ func (m *HalfEdgeMesh) IsClosed() bool {
 	return true
 }
 
+// Get the axis-aligned bounding box.
+func (m *HalfEdgeMesh) GetAABB() meshx.AABB {
+	minBound := m.vertices[0].Point
+	maxBound := m.vertices[0].Point
+
+	for _, vertex := range m.vertices[1:] {
+		for i := 0; i < 3; i++ {
+			if vertex.Point[i] < minBound[i] {
+				minBound[i] = vertex.Point[i]
+			}
+
+			if vertex.Point[i] > maxBound[i] {
+				maxBound[i] = vertex.Point[i]
+			}
+		}
+	}
+
+	return meshx.NewAABBFromBounds(minBound, maxBound)
+}
+
 // Get the isolated components (faces).
 func (m *HalfEdgeMesh) GetComponents() [][]int {
 	components := make([][]int, 0)
