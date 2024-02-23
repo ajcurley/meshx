@@ -517,6 +517,24 @@ func (m *HalfEdgeMesh) Extract(faces []int) *HalfEdgeMesh {
 	return &mesh
 }
 
+// Extract the patches into a new mesh.
+func (m *HalfEdgeMesh) ExtractPatches(patches []int) *HalfEdgeMesh {
+	faces := make([]int, 0)
+	indexPatches := make(map[int]bool)
+
+	for _, patch := range patches {
+		indexPatches[patch] = true
+	}
+
+	for id, face := range m.faces {
+		if _, ok := indexPatches[face.Patch]; ok {
+			faces = append(faces, id)
+		}
+	}
+
+	return m.Extract(faces)
+}
+
 // Translate the mesh by a Vector.
 func (m *HalfEdgeMesh) Translate(offset meshx.Vector) {
 	for i, vertex := range m.vertices {
