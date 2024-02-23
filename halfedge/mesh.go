@@ -156,8 +156,8 @@ func (m *HalfEdgeMesh) GetNumberOfVertices() int {
 }
 
 // Get a vertex by index.
-func (m *HalfEdgeMesh) GetVertex(index int) *Vertex {
-	return &m.vertices[index]
+func (m *HalfEdgeMesh) GetVertex(index int) Vertex {
+	return m.vertices[index]
 }
 
 // Get the faces using a vertex.
@@ -181,8 +181,8 @@ func (m *HalfEdgeMesh) GetNumberOfFaces() int {
 }
 
 // Get a face by index.
-func (m *HalfEdgeMesh) GetFace(index int) *Face {
-	return &m.faces[index]
+func (m *HalfEdgeMesh) GetFace(index int) Face {
+	return m.faces[index]
 }
 
 // Get the vertices of a face.
@@ -252,8 +252,8 @@ func (m *HalfEdgeMesh) GetNumberOfHalfEdges() int {
 }
 
 // Get a half edge by index.
-func (m *HalfEdgeMesh) GetHalfEdge(index int) *HalfEdge {
-	return &m.halfEdges[index]
+func (m *HalfEdgeMesh) GetHalfEdge(index int) HalfEdge {
+	return m.halfEdges[index]
 }
 
 // Get the number of patches.
@@ -262,8 +262,21 @@ func (m *HalfEdgeMesh) GetNumberOfPatches() int {
 }
 
 // Get a patch by index.
-func (m *HalfEdgeMesh) GetPatch(index int) *Patch {
-	return &m.patches[index]
+func (m *HalfEdgeMesh) GetPatch(index int) Patch {
+	return m.patches[index]
+}
+
+// Get the faces of a patch.
+func (m *HalfEdgeMesh) GetPatchFaces(index int) []int {
+	faces := make([]int, 0)
+
+	for id, face := range m.faces {
+		if face.Patch == index {
+			faces = append(faces, id)
+		}
+	}
+
+	return faces
 }
 
 // Return true if there are no open edges.
