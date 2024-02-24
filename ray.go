@@ -37,28 +37,32 @@ func (r Ray) IntersectsAABB(query AABB) bool {
 
 // Implement the IntersectsTriangle interface.
 func (r Ray) IntersectsTriangle(query Triangle) bool {
-	const epsilon float64 = 1e-7
+	const epsilon float64 = 1e-8
 
-	v0v1 := query.Q.Sub(query.P)
-	v0v2 := query.R.Sub(query.P)
+	e1 := query.Q.Sub(query.P)
+	e2 := query.R.Sub(query.P)
 
-	p := r.Direction.Cross(v0v2)
-	d := v0v1.Dot(p)
+	p := r.Direction.Cross(e2)
+	det := e1.Dot(p)
 
-	if d < epsilon {
+	if det < epsilon {
 		return false
 	}
 
-	inv := 1 / d
-	t := r.Origin.Sub(query.P)
-	u := t.Dot(p) * inv
+	invDet := 1.0 / det
+	s := r.Origin.Sub(query.P)
+	u := invDet * s.Dot(p)
 
-	if u < 0 || u > 1 {
+	if u < 0.0 || u > 1.0 {
 		return false
 	}
 
-	q := t.Cross(v0v1)
-	v := r.Direction.Dot(q) * inv
+	q := s.Cross(e1)
+	v := invDet * r.Direction.Dot(q)
 
-	return v >= 0 && u+v <= 1
+	if v < 0.0 || u+v > 1.0 {
+		return false
+	}
+
+	return invDet*e2.Dot(q) > epsilon
 }
