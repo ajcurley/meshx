@@ -1,11 +1,12 @@
 package halfedge
 
 type HalfEdge struct {
-	Origin int
-	Face   int
-	Next   int
-	Prev   int
-	Twin   int
+	Origin    int
+	Face      int
+	Next      int
+	Prev      int
+	Twin      int
+	IsFeature bool
 }
 
 // Return true if the half edge is on the boundary (no twin).

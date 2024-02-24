@@ -136,6 +136,11 @@ func (v Vector) Cross(w Vector) Vector {
 	}
 }
 
+// Compute the angle (in radians) from v to w.
+func (v Vector) AngleTo(w Vector) float64 {
+	return math.Acos(v.Dot(w) / (v.Mag() * w.Mag()))
+}
+
 // Implement the IntersectsAABB interface.
 func (v Vector) IntersectsAABB(query AABB) bool {
 	for i := 0; i < 3; i++ {

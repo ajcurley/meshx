@@ -50,11 +50,12 @@ func NewHalfEdgeMesh(source meshx.Mesh) (*HalfEdgeMesh, error) {
 			prev -= len(face) * min(0, prev)
 
 			mesh.halfEdges[k] = HalfEdge{
-				Origin: vertex,
-				Face:   i,
-				Next:   nHalfEdges + next,
-				Prev:   nHalfEdges + prev,
-				Twin:   -1,
+				Origin:    vertex,
+				Face:      i,
+				Next:      nHalfEdges + next,
+				Prev:      nHalfEdges + prev,
+				Twin:      -1,
+				IsFeature: false,
 			}
 
 			p := min(vertex, face[next])
@@ -129,8 +130,50 @@ func (m *HalfEdgeMesh) WriteOBJ(writer io.Writer) error {
 	return objWriter.Write()
 }
 
+// Write the HalfEdgeMesh feature edges to an OBJ file.
+func (m *HalfEdgeMesh) WriteOBJFeatureEdges(writer io.Writer) error {
+	indexEdges := make(map[[2]int]bool)
+	indexVertices := make(map[int]int)
+	edges := make([][2]int, 0)
+
+	for _, halfEdge := range m.halfEdges {
+		if halfEdge.IsFeature {
+			next := m.halfEdges[halfEdge.Next]
+
+			p := min(halfEdge.Origin, next.Origin)
+			q := max(halfEdge.Origin, next.Origin)
+			edge := [2]int{p, q}
+
+			if _, ok := indexEdges[edge]; !ok {
+				if _, ok := indexVertices[p]; !ok {
+					indexVertices[p] = len(indexVertices)
+				}
+
+				if _, ok := indexVertices[q]; !ok {
+					indexVertices[q] = len(indexVertices)
+				}
+
+				indexEdges[edge] = true
+				edges = append(edges, [2]int{indexVertices[p], indexVertices[q]})
+			}
+		}
+	}
+
+	vertices := make([]meshx.Vector, len(indexVertices))
+
+	for oldIndex, newIndex := range indexVertices {
+		vertices[newIndex] = m.vertices[oldIndex].Point
+	}
+
+	objWriter := meshx.NewOBJWriter(writer)
+	objWriter.SetVertices(vertices)
+	objWriter.SetEdges(edges)
+
+	return objWriter.Write()
+}
+
 // Write the HalfEdgeMesh to an OBJ file path.
-func (m *HalfEdgeMesh) WriteOBJPath(path string) error {
+func (m *HalfEdgeMesh) WriteOBJToPath(path string) error {
 	file, err := os.Create(path)
 	if err != nil {
 		return err
@@ -148,6 +191,27 @@ func (m *HalfEdgeMesh) WriteOBJPath(path string) error {
 	}
 
 	return m.WriteOBJ(writer)
+}
+
+// Write the HalfEdgeMesh feature edges to an OBJ file path.
+func (m *HalfEdgeMesh) WriteOBJFeatureEdgesToPath(path string) error {
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	var writer io.Writer
+
+	if strings.ToLower(filepath.Ext(path)) == ".gz" {
+		gzipFile := gzip.NewWriter(file)
+		defer gzipFile.Close()
+		writer = gzipFile
+	} else {
+		writer = file
+	}
+
+	return m.WriteOBJFeatureEdges(writer)
 }
 
 // Get the number of vertices.
@@ -230,6 +294,32 @@ func (m *HalfEdgeMesh) GetFaceNeighbors(index int) []int {
 	return faces
 }
 
+// Get the normal vector of a face.
+func (m *HalfEdgeMesh) GetFaceNormal(index int) meshx.Vector {
+	var normal meshx.Vector
+	var totalArea float64
+
+	vertices := m.GetFaceVertices(index)
+
+	for i := 0; i < len(vertices); i++ {
+		j := (i + 1) % len(vertices)
+		k := (i + 2) % len(vertices)
+
+		p := m.vertices[vertices[i]].Point
+		q := m.vertices[vertices[j]].Point
+		r := m.vertices[vertices[k]].Point
+		triangle := meshx.NewTriangle(p, q, r)
+
+		area := triangle.Area()
+		totalArea += area
+
+		weightedNormal := triangle.UnitNormal().MulScalar(area)
+		normal = normal.Add(weightedNormal)
+	}
+
+	return normal.DivScalar(totalArea)
+}
+
 // Flip the orientation of a face.
 func (m *HalfEdgeMesh) flipFace(index int) {
 	for _, id := range m.GetFaceHalfEdges(index) {
@@ -254,6 +344,16 @@ func (m *HalfEdgeMesh) GetNumberOfHalfEdges() int {
 // Get a half edge by index.
 func (m *HalfEdgeMesh) GetHalfEdge(index int) HalfEdge {
 	return m.halfEdges[index]
+}
+
+// Get the face angle between two faces sharing a half edge.
+func (m *HalfEdgeMesh) GetHalfEdgeFaceAngle(index int) float64 {
+	halfEdge := m.GetHalfEdge(index)
+	twin := m.GetHalfEdge(halfEdge.Twin)
+
+	u := m.GetFaceNormal(halfEdge.Face)
+	v := m.GetFaceNormal(twin.Face)
+	return u.AngleTo(v)
 }
 
 // Get the number of patches.
@@ -307,6 +407,44 @@ func (m *HalfEdgeMesh) GetAABB() meshx.AABB {
 	}
 
 	return meshx.NewAABBFromBounds(minBound, maxBound)
+}
+
+// Get the the half edges marked as a feature.
+func (m *HalfEdgeMesh) GetFeatureEdges() []int {
+	featureEdges := make([]int, 0)
+
+	for index, halfEdge := range m.halfEdges {
+		if halfEdge.IsFeature {
+			featureEdges = append(featureEdges, index)
+		}
+	}
+
+	return featureEdges
+}
+
+// Set a half edge as a feature (or not) manually.
+func (m *HalfEdgeMesh) SetFeatureEdge(index int, isFeature bool) {
+	m.halfEdges[index].IsFeature = isFeature
+}
+
+// Mark all half edges as non-feature edges.
+func (m *HalfEdgeMesh) ClearFeatureEdges() {
+	for index := range m.halfEdges {
+		m.halfEdges[index].IsFeature = false
+	}
+}
+
+// Mark the half edges exceeding the angle threshold between faces. The angle
+// threshold is specified in radians.
+func (m *HalfEdgeMesh) ComputeFeatureEdges(threshold float64) {
+	for index, halfEdge := range m.halfEdges {
+		if !halfEdge.IsBoundary() && !halfEdge.IsFeature {
+			if m.GetHalfEdgeFaceAngle(index) > threshold {
+				halfEdge.IsFeature = true
+				m.halfEdges[halfEdge.Twin].IsFeature = true
+			}
+		}
+	}
 }
 
 // Get the isolated components (faces).

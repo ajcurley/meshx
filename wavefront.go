@@ -238,6 +238,7 @@ type OBJWriter struct {
 	vertices    []Vector
 	faces       [][]int
 	facePatches []int
+	edges       [][2]int
 	patches     []string
 }
 
@@ -248,6 +249,7 @@ func NewOBJWriter(writer io.Writer) *OBJWriter {
 		vertices:    make([]Vector, 0),
 		faces:       make([][]int, 0),
 		facePatches: make([]int, 0),
+		edges:       make([][2]int, 0),
 		patches:     make([]string, 0),
 	}
 }
@@ -265,6 +267,11 @@ func (w *OBJWriter) SetFaces(faces [][]int) {
 // Set the face patches to write.
 func (w *OBJWriter) SetFacePatches(facePatches []int) {
 	w.facePatches = facePatches
+}
+
+// Set the edges to write.
+func (w *OBJWriter) SetEdges(edges [][2]int) {
+	w.edges = edges
 }
 
 // Set the patches to write.
@@ -288,6 +295,13 @@ func (w *OBJWriter) Write() error {
 
 	for _, vertex := range w.vertices {
 		line = fmt.Sprintf("v %f %f %f\n", vertex[0], vertex[1], vertex[2])
+		if _, err := writer.WriteString(line); err != nil {
+			return err
+		}
+	}
+
+	for _, edge := range w.edges {
+		line = fmt.Sprintf("l %d %d\n", edge[0]+1, edge[1]+1)
 		if _, err := writer.WriteString(line); err != nil {
 			return err
 		}
