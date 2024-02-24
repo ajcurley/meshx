@@ -307,16 +307,29 @@ func (w *OBJWriter) Write() error {
 		}
 	}
 
-	for patch := range w.patches {
-		line = fmt.Sprintf("g %s\n", w.patches[patch])
-		if _, err := writer.WriteString(line); err != nil {
-			return err
-		}
+	if len(patchFaces) != 0 {
+		for patch := range w.patches {
+			line = fmt.Sprintf("g %s\n", w.patches[patch])
+			if _, err := writer.WriteString(line); err != nil {
+				return err
+			}
 
-		for _, face := range patchFaces[patch] {
+			for _, face := range patchFaces[patch] {
+				writer.WriteString("f")
+
+				for _, vertex := range w.faces[face] {
+					entry := fmt.Sprintf(" %d", vertex+1)
+					writer.WriteString(entry)
+				}
+
+				writer.WriteString("\n")
+			}
+		}
+	} else {
+		for _, face := range w.faces {
 			writer.WriteString("f")
 
-			for _, vertex := range w.faces[face] {
+			for _, vertex := range face {
 				entry := fmt.Sprintf(" %d", vertex+1)
 				writer.WriteString(entry)
 			}

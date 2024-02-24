@@ -25,3 +25,6 @@ go.work
 
 # Vim
 *.swp
+
+# Testing artifacts
+artifacts/
