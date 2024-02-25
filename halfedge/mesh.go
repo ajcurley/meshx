@@ -19,7 +19,7 @@ type HalfEdgeMesh struct {
 }
 
 // Construct a HalfEdgeMesh from a MeshReader.
-func NewHalfEdgeMesh(source meshx.Mesh) (*HalfEdgeMesh, error) {
+func NewHalfEdgeMesh(source meshx.MeshReader) (*HalfEdgeMesh, error) {
 	mesh := HalfEdgeMesh{
 		vertices:  make([]Vertex, source.GetNumberOfVertices()),
 		faces:     make([]Face, source.GetNumberOfFaces()),
