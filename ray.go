@@ -13,26 +13,28 @@ func NewRay(origin, direction Vector) Ray {
 
 // Implement the IntersectsAABB interface.
 func (r Ray) IntersectsAABB(query AABB) bool {
-	var tmin, tmax, t1, t2 float64
+	var t1, t2 float64
+
 	minBound := query.GetMinBound()
 	maxBound := query.GetMaxBound()
+	inv := r.Direction.Inv()
 
-	t1 = (minBound[0] - r.Origin[0]) / r.Direction[0]
-	t2 = (maxBound[0] - r.Origin[0]) / r.Direction[0]
-	tmin = min(t1, t2)
-	tmax = max(t1, t2)
+	t1 = (minBound[0] - r.Origin[0]) * inv[0]
+	t2 = (maxBound[0] - r.Origin[0]) * inv[0]
+	tmin := min(t1, t2)
+	tmax := max(t1, t2)
 
-	t1 = (minBound[1] - r.Origin[1]) / r.Direction[1]
-	t2 = (maxBound[1] - r.Origin[1]) / r.Direction[1]
+	t1 = (minBound[1] - r.Origin[1]) * inv[1]
+	t2 = (maxBound[1] - r.Origin[1]) * inv[1]
 	tmin = max(tmin, min(t1, t2))
 	tmax = min(tmax, max(t1, t2))
 
-	t1 = (minBound[2] - r.Origin[2]) / r.Direction[2]
-	t2 = (maxBound[2] - r.Origin[2]) / r.Direction[2]
+	t1 = (minBound[2] - r.Origin[2]) * inv[2]
+	t2 = (maxBound[2] - r.Origin[2]) * inv[2]
 	tmin = max(tmin, min(t1, t2))
 	tmax = min(tmax, max(t1, t2))
 
-	return tmax >= max(tmin, 0)
+	return tmax >= max(0, tmin)
 }
 
 // Implement the IntersectsTriangle interface.
