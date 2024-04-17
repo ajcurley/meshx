@@ -1,4 +1,5 @@
-use crate::geometry::Vector3;
+use crate::geometry::collision::intersects_aabb_vector3;
+use crate::geometry::{Intersects, Vector3};
 
 /// Axis-aligned bounding box in three-dimensional Cartesian space.
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -28,5 +29,21 @@ impl Aabb {
     /// Get the halfsize
     pub fn halfsize(&self) -> Vector3 {
         self.halfsize
+    }
+
+    /// Compute the min bound
+    pub fn min(&self) -> Vector3 {
+        self.center - self.halfsize
+    }
+
+    /// Compute the max boun
+    pub fn max(&self) -> Vector3 {
+        self.center + self.halfsize
+    }
+}
+
+impl Intersects<Vector3> for Aabb {
+    fn intersects(&self, v: &Vector3) -> bool {
+        intersects_aabb_vector3(self, v)
     }
 }

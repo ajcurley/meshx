@@ -1,3 +1,6 @@
+use crate::geometry::collision::intersects_aabb_vector3;
+use crate::geometry::{Aabb, Intersects};
+
 /// Vector3 in three-dimensional Cartesian space.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Vector3 {
@@ -39,6 +42,21 @@ impl Vector3 {
     /// Compute the angle (in radians) between u and v
     pub fn angle(u: &Vector3, v: &Vector3) -> f64 {
         (Vector3::dot(u, v) / (u.mag() * v.mag())).acos()
+    }
+
+    /// Get the x-component
+    pub fn x(&self) -> f64 {
+        self.x
+    }
+
+    /// Get the y-component
+    pub fn y(&self) -> f64 {
+        self.y
+    }
+
+    /// Get the z-component
+    pub fn z(&self) -> f64 {
+        self.z
     }
 
     /// Compute the magnitude (L2-norm)
@@ -302,5 +320,11 @@ impl std::ops::Neg for Vector3 {
             y: -self.y,
             z: -self.z,
         }
+    }
+}
+
+impl Intersects<Aabb> for Vector3 {
+    fn intersects(&self, aabb: &Aabb) -> bool {
+        intersects_aabb_vector3(aabb, self)
     }
 }
