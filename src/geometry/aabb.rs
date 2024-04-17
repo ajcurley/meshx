@@ -1,5 +1,5 @@
-use crate::geometry::collision::intersects_aabb_vector3;
-use crate::geometry::{Intersects, Vector3};
+use crate::geometry::collision;
+use crate::geometry::{Intersects, Ray, Vector3};
 
 /// Axis-aligned bounding box in three-dimensional Cartesian space.
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -42,8 +42,14 @@ impl Aabb {
     }
 }
 
+impl Intersects<Ray> for Aabb {
+    fn intersects(&self, ray: &Ray) -> bool {
+        collision::intersects_aabb_ray(self, ray)
+    }
+}
+
 impl Intersects<Vector3> for Aabb {
     fn intersects(&self, v: &Vector3) -> bool {
-        intersects_aabb_vector3(self, v)
+        collision::intersects_aabb_vector3(self, v)
     }
 }

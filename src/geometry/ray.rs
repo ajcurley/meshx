@@ -1,4 +1,5 @@
-use crate::geometry::Vector3;
+use crate::geometry::collision;
+use crate::geometry::{Aabb, Intersects, Vector3};
 
 /// One-sided infinite ray in three-dimensional Cartesian space.
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -21,5 +22,11 @@ impl Ray {
     /// Get the direction
     pub fn direction(&self) -> Vector3 {
         self.direction
+    }
+}
+
+impl Intersects<Aabb> for Ray {
+    fn intersects(&self, aabb: &Aabb) -> bool {
+        collision::intersects_aabb_ray(aabb, self)
     }
 }
