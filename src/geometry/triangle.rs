@@ -1,4 +1,5 @@
-use crate::geometry::{Aabb, Vector3};
+use crate::geometry::collision;
+use crate::geometry::{Aabb, Intersects, Ray, Vector3};
 
 /// Triangle in three-dimensional Cartesian space
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -66,5 +67,11 @@ impl std::ops::IndexMut<usize> for Triangle {
             2 => &mut self.r,
             _ => panic!("index out of range"),
         }
+    }
+}
+
+impl Intersects<Ray> for Triangle {
+    fn intersects(&self, ray: &Ray) -> bool {
+        collision::intersects_ray_triangle(ray, self)
     }
 }
