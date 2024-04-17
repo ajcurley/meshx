@@ -42,6 +42,12 @@ impl Aabb {
     }
 }
 
+impl Intersects<Aabb> for Aabb {
+    fn intersects(&self, aabb: &Aabb) -> bool {
+        collision::intersects_aabb_aabb(self, aabb)
+    }
+}
+
 impl Intersects<Ray> for Aabb {
     fn intersects(&self, ray: &Ray) -> bool {
         collision::intersects_aabb_ray(self, ray)
