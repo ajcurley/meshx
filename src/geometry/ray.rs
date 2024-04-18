@@ -1,5 +1,5 @@
 use crate::geometry::collision;
-use crate::geometry::{Aabb, Intersects, Triangle, Vector3};
+use crate::geometry::{Aabb, Intersects, Sphere, Triangle, Vector3};
 
 /// One-sided infinite ray in three-dimensional Cartesian space.
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -28,6 +28,12 @@ impl Ray {
 impl Intersects<Aabb> for Ray {
     fn intersects(&self, aabb: &Aabb) -> bool {
         collision::intersects_aabb_ray(aabb, self)
+    }
+}
+
+impl Intersects<Sphere> for Ray {
+    fn intersects(&self, sphere: &Sphere) -> bool {
+        collision::intersects_ray_sphere(self, sphere)
     }
 }
 

@@ -1,5 +1,5 @@
 use crate::geometry::collision;
-use crate::geometry::{Aabb, Intersects, Vector3};
+use crate::geometry::{Aabb, Intersects, Ray, Vector3};
 
 /// Sphere in three-dimensional Cartesian space.
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -34,6 +34,12 @@ impl Sphere {
 impl Intersects<Aabb> for Sphere {
     fn intersects(&self, aabb: &Aabb) -> bool {
         collision::intersects_aabb_sphere(aabb, self)
+    }
+}
+
+impl Intersects<Ray> for Sphere {
+    fn intersects(&self, ray: &Ray) -> bool {
+        collision::intersects_ray_sphere(ray, self)
     }
 }
 
