@@ -43,6 +43,12 @@ impl Intersects<Ray> for Sphere {
     }
 }
 
+impl Intersects<Sphere> for Sphere {
+    fn intersects(&self, sphere: &Sphere) -> bool {
+        collision::intersects_sphere_sphere(self, sphere)
+    }
+}
+
 impl Intersects<Vector3> for Sphere {
     fn intersects(&self, v: &Vector3) -> bool {
         collision::intersects_sphere_vector3(self, v)
