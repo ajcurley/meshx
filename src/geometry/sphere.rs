@@ -36,3 +36,9 @@ impl Intersects<Aabb> for Sphere {
         collision::intersects_aabb_sphere(aabb, self)
     }
 }
+
+impl Intersects<Vector3> for Sphere {
+    fn intersects(&self, v: &Vector3) -> bool {
+        collision::intersects_sphere_vector3(self, v)
+    }
+}

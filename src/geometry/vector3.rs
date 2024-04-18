@@ -1,5 +1,5 @@
-use crate::geometry::collision::intersects_aabb_vector3;
-use crate::geometry::{Aabb, Intersects};
+use crate::geometry::collision;
+use crate::geometry::{Aabb, Intersects, Sphere};
 
 /// Vector3 in three-dimensional Cartesian space.
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -325,6 +325,12 @@ impl std::ops::Neg for Vector3 {
 
 impl Intersects<Aabb> for Vector3 {
     fn intersects(&self, aabb: &Aabb) -> bool {
-        intersects_aabb_vector3(aabb, self)
+        collision::intersects_aabb_vector3(aabb, self)
+    }
+}
+
+impl Intersects<Sphere> for Vector3 {
+    fn intersects(&self, sphere: &Sphere) -> bool {
+        collision::intersects_sphere_vector3(sphere, self)
     }
 }
