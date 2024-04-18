@@ -1,4 +1,5 @@
-use crate::geometry::{Aabb, Vector3};
+use crate::geometry::collision;
+use crate::geometry::{Aabb, Intersects, Vector3};
 
 /// Sphere in three-dimensional Cartesian space.
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -27,5 +28,11 @@ impl Sphere {
     /// Get the radius
     pub fn radius(&self) -> f64 {
         self.radius
+    }
+}
+
+impl Intersects<Aabb> for Sphere {
+    fn intersects(&self, aabb: &Aabb) -> bool {
+        collision::intersects_aabb_sphere(aabb, self)
     }
 }
