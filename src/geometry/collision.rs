@@ -1,5 +1,3 @@
-use crate::geometry::Vector3;
-
 pub mod aabb_aabb;
 pub mod aabb_ray;
 pub mod aabb_sphere;
