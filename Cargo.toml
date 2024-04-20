@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+flate2 = { version = "1", features = ["zlib"] }
 
 [profile.dev]
 opt-level = 3
