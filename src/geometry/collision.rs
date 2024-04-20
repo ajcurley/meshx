@@ -23,8 +23,3 @@ pub use sphere_vector3::intersects_sphere_vector3;
 pub trait Intersects<T> {
     fn intersects(&self, other: &T) -> bool;
 }
-
-/// Find the closest point on the geometry.
-pub trait ClosestPoint<T> {
-    fn closest_point(&self, other: &T) -> Vector3;
-}
