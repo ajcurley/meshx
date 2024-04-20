@@ -281,3 +281,41 @@ impl std::fmt::Display for ParseObjError {
 }
 
 impl std::error::Error for ParseObjError {}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_obj_reader() {
+        let path = "tests/fixtures/box.obj";
+        let mut reader = ObjReader::new(&path);
+        reader.read().unwrap();
+
+        assert_eq!(reader.vertices().len(), 8);
+        assert_eq!(reader.faces().len(), 12);
+        assert_eq!(reader.groups().len(), 0);
+    }
+
+    #[test]
+    fn test_obj_reader_gzip() {
+        let path = "tests/fixtures/box.obj.gz";
+        let mut reader = ObjReader::new(&path);
+        reader.read().unwrap();
+
+        assert_eq!(reader.vertices().len(), 8);
+        assert_eq!(reader.faces().len(), 12);
+        assert_eq!(reader.groups().len(), 0);
+    }
+
+    #[test]
+    fn test_obj_reader_groups() {
+        let path = "tests/fixtures/box_groups.obj";
+        let mut reader = ObjReader::new(&path);
+        reader.read().unwrap();
+
+        assert_eq!(reader.vertices().len(), 8);
+        assert_eq!(reader.faces().len(), 12);
+        assert_eq!(reader.groups().len(), 6);
+    }
+}
