@@ -1,3 +1,5 @@
+use crate::geometry::Vector3;
+
 pub mod aabb_aabb;
 pub mod aabb_ray;
 pub mod aabb_sphere;
@@ -17,7 +19,12 @@ pub use ray_triangle::intersects_ray_triangle;
 pub use sphere_sphere::intersects_sphere_sphere;
 pub use sphere_vector3::intersects_sphere_vector3;
 
-/// Check if the two geometries spatiall intersect.
+/// Check if the two geometries spatially intersect.
 pub trait Intersects<T> {
     fn intersects(&self, other: &T) -> bool;
+}
+
+/// Find the closest point on the geometry.
+pub trait ClosestPoint<T> {
+    fn closest_point(&self, other: &T) -> Vector3;
 }
