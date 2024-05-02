@@ -157,4 +157,28 @@ impl HeMesh {
     pub fn n_patches(&self) -> usize {
         self.patches.len()
     }
+
+    /// Compute if the mesh is closed
+    pub fn is_closed(&self) -> bool {
+        for half_edge in self.half_edges.iter() {
+            if half_edge.is_boundary() {
+                return false;
+            }
+        }
+
+        true
+    }
+
+    /// Compute if the mesh faces are consistently oriented
+    pub fn is_consistent(&self) -> bool {
+        for half_edge in self.half_edges.iter() {
+            if let Some(twin) = half_edge.twin {
+                if self.half_edges[twin].origin == half_edge.origin {
+                    return false;
+                }
+            }
+        }
+
+        true
+    }
 }
