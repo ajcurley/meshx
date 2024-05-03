@@ -1,18 +1,19 @@
-use std::ffi::OsStr;
 use std::fs::File;
 use std::io::prelude::*;
-use std::path::Path;
 
 use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 
+use crate::mesh::common::{Edge, Face, Patch, Vertex};
+use crate::mesh::utils::is_gzip;
+
 #[derive(Debug, Clone)]
 pub struct ObjReader {
     filename: String,
-    vertices: Vec<ObjVertex>,
-    faces: Vec<ObjFace>,
-    groups: Vec<ObjGroup>,
+    vertices: Vec<Vertex>,
+    faces: Vec<Face>,
+    patches: Vec<Patch>,
 }
 
 impl ObjReader {
@@ -22,35 +23,23 @@ impl ObjReader {
             filename: filename.to_string(),
             vertices: vec![],
             faces: vec![],
-            groups: vec![],
+            patches: vec![],
         }
     }
 
     /// Get a borrowed reference to the vertices
-    pub fn vertices(&self) -> &Vec<ObjVertex> {
+    pub fn vertices(&self) -> &Vec<Vertex> {
         &self.vertices
     }
 
     /// Get a borrowed reference to the faces
-    pub fn faces(&self) -> &Vec<ObjFace> {
+    pub fn faces(&self) -> &Vec<Face> {
         &self.faces
     }
 
-    /// Get a borrowed reference to the groups
-    pub fn groups(&self) -> &Vec<ObjGroup> {
-        &self.groups
-    }
-
-    /// Get if the input file is compressed
-    pub fn is_compressed(&self) -> bool {
-        let path = Path::new(&self.filename);
-        let extension = path.extension().and_then(OsStr::to_str);
-
-        if let Some(ext) = extension {
-            return ext.to_lowercase() == "gz";
-        }
-
-        false
+    /// Get a borrowed reference to the patches
+    pub fn patches(&self) -> &Vec<Patch> {
+        &self.patches
     }
 
     /// Read the file contents
@@ -58,22 +47,22 @@ impl ObjReader {
         let mut contents = String::new();
         let mut file = File::open(&self.filename)?;
 
-        if self.is_compressed() {
+        if is_gzip(&self.filename) {
             let mut file = GzDecoder::new(file);
             file.read_to_string(&mut contents)?;
         } else {
             file.read_to_string(&mut contents)?;
         }
 
-        for (count, line) in contents.lines().enumerate() {
+        for (count, edge) in contents.lines().enumerate() {
             let count = count + 1;
-            let line = line.trim();
-            let args = line.splitn(2, char::is_whitespace).collect::<Vec<&str>>();
+            let edge = edge.trim();
+            let args = edge.splitn(2, char::is_whitespace).collect::<Vec<&str>>();
 
             let result = match args.first() {
                 Some(&"v") => self.parse_vertex(&args[1], count),
                 Some(&"f") => self.parse_face(&args[1], count),
-                Some(&"g") => self.parse_group(&args[1], count),
+                Some(&"g") => self.parse_patch(&args[1], count),
                 _ => Ok(()),
             };
 
@@ -90,7 +79,7 @@ impl ObjReader {
 
     /// Parse a vertex from an entry
     fn parse_vertex(&mut self, entry: &str, count: usize) -> Result<(), ParseObjError> {
-        let mut vertex = ObjVertex::default();
+        let mut vertex = Vertex::default();
         let mut is_error = false;
 
         for (i, value) in entry.split_whitespace().enumerate() {
@@ -119,7 +108,8 @@ impl ObjReader {
 
     /// Parse a face from an entry
     fn parse_face(&mut self, entry: &str, count: usize) -> Result<(), ParseObjError> {
-        let mut face = ObjFace::default();
+        let mut vertices = vec![];
+        let mut patch = None;
         let mut is_error = false;
 
         for value in entry.split_whitespace() {
@@ -127,7 +117,7 @@ impl ObjReader {
 
             if let Ok(v) = value.parse::<usize>() {
                 if v != 0 {
-                    face.vertices.push(v - 1);
+                    vertices.push(v - 1);
                 } else {
                     is_error = true;
                     break;
@@ -144,30 +134,31 @@ impl ObjReader {
             return Err(error);
         }
 
-        if self.groups.len() != 0 {
-            face.group = Some(self.groups.len() - 1);
+        if self.patches.len() != 0 {
+            patch = Some(self.patches.len() - 1);
         }
 
+        let face = Face::new(vertices, patch);
         self.faces.push(face);
 
         Ok(())
     }
 
-    /// Parse a group from an entry
-    fn parse_group(&mut self, entry: &str, _: usize) -> Result<(), ParseObjError> {
+    /// Parse a patch from an entry
+    fn parse_patch(&mut self, entry: &str, _: usize) -> Result<(), ParseObjError> {
         let name = entry.trim().to_string();
-        let group = ObjGroup::new(name);
-        self.groups.push(group);
+        let patch = Patch::new(name);
+        self.patches.push(patch);
         Ok(())
     }
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct ObjWriter {
-    vertices: Vec<ObjVertex>,
-    faces: Vec<ObjFace>,
-    lines: Vec<ObjLine>,
-    groups: Vec<ObjGroup>,
+    vertices: Vec<Vertex>,
+    faces: Vec<Face>,
+    edges: Vec<Edge>,
+    patches: Vec<Patch>,
 }
 
 impl ObjWriter {
@@ -177,48 +168,48 @@ impl ObjWriter {
     }
 
     /// Set the vertices
-    pub fn set_vertices(&mut self, vertices: Vec<ObjVertex>) {
+    pub fn set_vertices(&mut self, vertices: Vec<Vertex>) {
         self.vertices = vertices;
     }
 
     /// Set the faces
-    pub fn set_faces(&mut self, faces: Vec<ObjFace>) {
+    pub fn set_faces(&mut self, faces: Vec<Face>) {
         self.faces = faces;
     }
 
-    /// Set the lines
-    pub fn set_lines(&mut self, lines: Vec<ObjLine>) {
-        self.lines = lines;
+    /// Set the edges
+    pub fn set_edges(&mut self, edges: Vec<Edge>) {
+        self.edges = edges;
     }
 
-    /// Set the groups
-    pub fn set_groups(&mut self, groups: Vec<ObjGroup>) {
-        self.groups = groups;
+    /// Set the patches
+    pub fn set_patches(&mut self, patches: Vec<Patch>) {
+        self.patches = patches;
     }
 
     /// Write the mesh to file
     pub fn write(&self, filename: &str) -> std::io::Result<()> {
         let mut data = String::new();
-        let mut group_faces: Vec<Vec<usize>> = vec![vec![]; self.groups.len() + 1];
-        let mut group_lines: Vec<Vec<usize>> = vec![vec![]; self.groups.len() + 1];
+        let mut patch_faces: Vec<Vec<usize>> = vec![vec![]; self.patches.len() + 1];
+        let mut patch_edges: Vec<Vec<usize>> = vec![vec![]; self.patches.len() + 1];
 
-        // Assign the faces to a group. If a face does not have a group, assign
-        // it to the default group at index 0.
+        // Assign the faces to a patch. If a face does not have a patch, assign
+        // it to the default patch at index 0.
         for (i, face) in self.faces.iter().enumerate() {
-            if let Some(group) = face.group {
-                group_faces[group + 1].push(i);
+            if let Some(patch) = face.patch() {
+                patch_faces[patch + 1].push(i);
             } else {
-                group_faces[0].push(i);
+                patch_faces[0].push(i);
             }
         }
 
-        // Assign the lines to a group. If a line does not have a group, assign
-        // it to the default group at index 0.
-        for (i, line) in self.lines.iter().enumerate() {
-            if let Some(group) = line.group {
-                group_lines[group + 1].push(i);
+        // Assign the edges to a patch. If a edge does not have a patch, assign
+        // it to the default patch at index 0.
+        for (i, edge) in self.edges.iter().enumerate() {
+            if let Some(patch) = edge.patch() {
+                patch_edges[patch + 1].push(i);
             } else {
-                group_lines[0].push(i);
+                patch_edges[0].push(i);
             }
         }
 
@@ -228,31 +219,31 @@ impl ObjWriter {
             data.push_str(&entry);
         }
 
-        // Format the faces for the default (unnamed) group.
-        for i in group_faces[0].iter() {
+        // Format the faces for the default (unnamed) patch.
+        for i in patch_faces[0].iter() {
             let entry = self.format_face(&self.faces[*i]);
             data.push_str(&entry);
         }
 
-        // Format the lines for the default (unnamed) group.
-        for i in group_lines[0].iter() {
-            let entry = self.format_line(&self.lines[*i]);
+        // Format the edges for the default (unnamed) patch.
+        for i in patch_edges[0].iter() {
+            let entry = self.format_edge(&self.edges[*i]);
             data.push_str(&entry);
         }
 
-        // For each group, format the group followed by all of its assigned
-        // faces and lines.
-        for (i, group) in self.groups.iter().enumerate() {
-            let entry = self.format_group(group);
+        // For each patch, format the patch followed by all of its assigned
+        // faces and edges.
+        for (i, patch) in self.patches.iter().enumerate() {
+            let entry = self.format_patch(patch);
             data.push_str(&entry);
 
-            for j in group_faces[i + 1].iter() {
+            for j in patch_faces[i + 1].iter() {
                 let entry = self.format_face(&self.faces[*j]);
                 data.push_str(&entry);
             }
 
-            for j in group_lines[i + 1].iter() {
-                let entry = self.format_line(&self.lines[*j]);
+            for j in patch_edges[i + 1].iter() {
+                let entry = self.format_edge(&self.edges[*j]);
                 data.push_str(&entry);
             }
         }
@@ -261,7 +252,7 @@ impl ObjWriter {
         let mut file = File::create(filename)?;
         let content = data.as_bytes();
 
-        if self.is_compressed(filename) {
+        if is_gzip(&filename) {
             let mut encoder = GzEncoder::new(&mut file, Compression::default());
             encoder.write_all(&content)?;
         } else {
@@ -272,14 +263,14 @@ impl ObjWriter {
     }
 
     /// Format a vertex to an entry
-    fn format_vertex(&self, vertex: &ObjVertex) -> String {
-        format!("v {} {} {}\n", vertex.x, vertex.y, vertex.z)
+    fn format_vertex(&self, vertex: &Vertex) -> String {
+        format!("v {} {} {}\n", vertex[0], vertex[1], vertex[2])
     }
 
     /// Format a face to an entry
-    fn format_face(&self, face: &ObjFace) -> String {
+    fn format_face(&self, face: &Face) -> String {
         let vertices = face
-            .vertices
+            .vertices()
             .iter()
             .map(|v| (v + 1).to_string())
             .collect::<Vec<String>>()
@@ -288,134 +279,14 @@ impl ObjWriter {
         format!("f {}\n", vertices)
     }
 
-    /// Format a line to an entry
-    fn format_line(&self, line: &ObjLine) -> String {
-        let vertices = line
-            .vertices
-            .iter()
-            .map(|v| (v + 1).to_string())
-            .collect::<Vec<String>>()
-            .join(" ");
-
-        format!("l {}\n", vertices)
+    /// Format a edge to an entry
+    fn format_edge(&self, edge: &Edge) -> String {
+        format!("l {} {}\n", edge[0], edge[1])
     }
 
-    /// Format a group to an entry
-    fn format_group(&self, group: &ObjGroup) -> String {
-        format!("g {}\n", group.name)
-    }
-
-    /// Get if the input file is compressed
-    fn is_compressed(&self, filename: &str) -> bool {
-        let path = Path::new(filename);
-        let extension = path.extension().and_then(OsStr::to_str);
-
-        if let Some(ext) = extension {
-            return ext.to_lowercase() == "gz";
-        }
-
-        false
-    }
-}
-
-#[derive(Debug, Copy, Clone, Default)]
-pub struct ObjVertex {
-    x: f64,
-    y: f64,
-    z: f64,
-}
-
-impl ObjVertex {
-    /// Construct an ObjVertex from its components
-    pub fn new(x: f64, y: f64, z: f64) -> ObjVertex {
-        ObjVertex { x, y, z }
-    }
-}
-
-impl std::ops::Index<usize> for ObjVertex {
-    type Output = f64;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        match index {
-            0 => &self.x,
-            1 => &self.y,
-            2 => &self.z,
-            _ => panic!("index out of range"),
-        }
-    }
-}
-
-impl std::ops::IndexMut<usize> for ObjVertex {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        match index {
-            0 => &mut self.x,
-            1 => &mut self.y,
-            2 => &mut self.z,
-            _ => panic!("index out of range"),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct ObjFace {
-    vertices: Vec<usize>,
-    group: Option<usize>,
-}
-
-impl ObjFace {
-    /// Construct an ObjFace from its vertices and group
-    pub fn new(vertices: Vec<usize>, group: Option<usize>) -> ObjFace {
-        ObjFace { vertices, group }
-    }
-
-    /// Get a borrowed reference to the vertices
-    pub fn vertices(&self) -> &Vec<usize> {
-        &self.vertices
-    }
-
-    /// Get the group
-    pub fn group(&self) -> Option<usize> {
-        self.group
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct ObjLine {
-    vertices: Vec<usize>,
-    group: Option<usize>,
-}
-
-impl ObjLine {
-    /// Construct an ObjLine from its vertices and group
-    pub fn new(vertices: Vec<usize>, group: Option<usize>) -> ObjLine {
-        ObjLine { vertices, group }
-    }
-
-    /// Get a borrowed reference to the vertices
-    pub fn vertices(&self) -> &Vec<usize> {
-        &self.vertices
-    }
-
-    /// Get the group
-    pub fn group(&self) -> Option<usize> {
-        self.group
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct ObjGroup {
-    name: String,
-}
-
-impl ObjGroup {
-    /// Construct an ObjGroup from its name
-    pub fn new(name: String) -> ObjGroup {
-        ObjGroup { name }
-    }
-
-    /// Get a borrowed reference to the name
-    pub fn name(&self) -> &str {
-        &self.name
+    /// Format a patch to an entry
+    fn format_patch(&self, patch: &Patch) -> String {
+        format!("g {}\n", patch.name())
     }
 }
 
@@ -434,7 +305,7 @@ impl ParseObjError {
 
 impl std::fmt::Display for ParseObjError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "line {}: {}", self.line_id, self.context)
+        write!(f, "edge {}: {}", self.line_id, self.context)
     }
 }
 
@@ -452,7 +323,7 @@ mod test {
 
         assert_eq!(reader.vertices().len(), 8);
         assert_eq!(reader.faces().len(), 12);
-        assert_eq!(reader.groups().len(), 0);
+        assert_eq!(reader.patches().len(), 0);
     }
 
     #[test]
@@ -463,18 +334,18 @@ mod test {
 
         assert_eq!(reader.vertices().len(), 8);
         assert_eq!(reader.faces().len(), 12);
-        assert_eq!(reader.groups().len(), 0);
+        assert_eq!(reader.patches().len(), 0);
     }
 
     #[test]
-    fn test_obj_reader_groups() {
+    fn test_obj_reader_patches() {
         let path = "tests/fixtures/box_groups.obj";
         let mut reader = ObjReader::new(&path);
         reader.read().unwrap();
 
         assert_eq!(reader.vertices().len(), 8);
         assert_eq!(reader.faces().len(), 12);
-        assert_eq!(reader.groups().len(), 6);
+        assert_eq!(reader.patches().len(), 6);
     }
 
     #[test]
@@ -487,7 +358,7 @@ mod test {
         let mut writer = ObjWriter::new();
         writer.set_vertices(reader.vertices);
         writer.set_faces(reader.faces);
-        writer.set_groups(reader.groups);
+        writer.set_patches(reader.patches);
         writer.write(out_path).unwrap();
 
         let mut expected_content = String::new();
@@ -516,7 +387,7 @@ mod test {
         let mut writer = ObjWriter::new();
         writer.set_vertices(reader.vertices);
         writer.set_faces(reader.faces);
-        writer.set_groups(reader.groups);
+        writer.set_patches(reader.patches);
         writer.write(out_path).unwrap();
 
         let mut expected_content = String::new();
@@ -535,7 +406,7 @@ mod test {
     }
 
     #[test]
-    fn test_obj_writer_groups() {
+    fn test_obj_writer_patches() {
         let path = "tests/fixtures/box_groups.obj";
         let mut reader = ObjReader::new(&path);
         reader.read().unwrap();
@@ -544,7 +415,7 @@ mod test {
         let mut writer = ObjWriter::new();
         writer.set_vertices(reader.vertices);
         writer.set_faces(reader.faces);
-        writer.set_groups(reader.groups);
+        writer.set_patches(reader.patches);
         writer.write(out_path).unwrap();
 
         let mut expected_content = String::new();
