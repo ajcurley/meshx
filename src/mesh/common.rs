@@ -1,3 +1,5 @@
+use crate::geometry::Vector3;
+
 #[derive(Debug, Copy, Clone, Default)]
 pub struct Vertex {
     x: f64,
@@ -36,6 +38,12 @@ impl std::ops::IndexMut<usize> for Vertex {
     }
 }
 
+impl Into<Vector3> for Vertex {
+    fn into(self) -> Vector3 {
+        Vector3::new(self.x, self.y, self.z)
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct Face {
     vertices: Vec<usize>,
@@ -57,6 +65,20 @@ impl Face {
     pub fn patch(&self) -> Option<usize> {
         self.patch
     }
+
+    /// Compute the edges from adjacent vertices
+    pub fn edges(&self) -> Vec<Edge> {
+        let n = self.vertices.len();
+        let mut edges = vec![];
+
+        for (i, &p) in self.vertices.iter().enumerate() {
+            let q = self.vertices[(i + 1) % n];
+            let edge = Edge::new(p, q, self.patch);
+            edges.push(edge);
+        }
+
+        edges
+    }
 }
 
 impl std::ops::Index<usize> for Face {
@@ -73,7 +95,7 @@ impl std::ops::IndexMut<usize> for Face {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Edge {
     p: usize,
     q: usize,
@@ -89,6 +111,20 @@ impl Edge {
     /// Get the patch
     pub fn patch(&self) -> Option<usize> {
         self.patch
+    }
+
+    /// Get the sorted representation
+    pub fn sorted(&self) -> Edge {
+        Edge {
+            p: self.p.min(self.q),
+            q: self.p.max(self.q),
+            patch: self.patch,
+        }
+    }
+
+    /// Compute the tuple representation
+    pub fn to_tuple(&self) -> (usize, usize) {
+        (self.p, self.q)
     }
 }
 
@@ -111,6 +147,13 @@ impl std::ops::IndexMut<usize> for Edge {
             1 => &mut self.q,
             _ => panic!("index out of range"),
         }
+    }
+}
+
+impl std::hash::Hash for Edge {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.p.hash(state);
+        self.q.hash(state);
     }
 }
 
