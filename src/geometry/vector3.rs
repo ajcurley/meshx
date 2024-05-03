@@ -2,7 +2,7 @@ use crate::geometry::collision;
 use crate::geometry::{Aabb, Intersects, Sphere};
 
 /// Vector3 in three-dimensional Cartesian space.
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, Default, PartialEq)]
 pub struct Vector3 {
     x: f64,
     y: f64,
