@@ -243,6 +243,23 @@ pub struct HeHalfEdge {
 }
 
 impl HeHalfEdge {
+    /// Construct a HeHalfEdge from its components
+    pub fn new(
+        origin: usize,
+        face: usize,
+        prev: usize,
+        next: usize,
+        twin: Option<usize>,
+    ) -> HeHalfEdge {
+        HeHalfEdge {
+            origin,
+            face,
+            prev,
+            next,
+            twin,
+        }
+    }
+
     /// Get the origin handle
     pub fn origin(&self) -> usize {
         self.origin
@@ -299,7 +316,7 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_hemesh_from_obj() {
+    fn test_from_obj() {
         let path = "tests/fixtures/box.obj";
         let mesh = HeMesh::from_obj(&path).unwrap();
 
@@ -310,7 +327,7 @@ mod test {
     }
 
     #[test]
-    fn test_hemesh_from_obj_patches() {
+    fn test_from_obj_patches() {
         let path = "tests/fixtures/box_groups.obj";
         let mesh = HeMesh::from_obj(&path).unwrap();
 
@@ -322,8 +339,40 @@ mod test {
 
     #[test]
     #[should_panic]
-    fn test_hemesh_from_obj_nonmanifold() {
+    fn test_from_obj_nonmanifold() {
         let path = "tests/fixtures/box_nonmanifold.obj";
         HeMesh::from_obj(&path).unwrap();
+    }
+
+    #[test]
+    fn test_is_closed() {
+        let path = "tests/fixtures/box.obj";
+        let mesh = HeMesh::from_obj(&path).unwrap();
+
+        assert!(mesh.is_closed());
+    }
+
+    #[test]
+    fn test_is_closed_open() {
+        let path = "tests/fixtures/box_open.obj";
+        let mesh = HeMesh::from_obj(&path).unwrap();
+
+        assert!(!mesh.is_closed());
+    }
+
+    #[test]
+    fn test_is_consistent() {
+        let path = "tests/fixtures/box.obj";
+        let mesh = HeMesh::from_obj(&path).unwrap();
+
+        assert!(mesh.is_consistent());
+    }
+
+    #[test]
+    fn test_is_consistent_inverted() {
+        let path = "tests/fixtures/box_inconsistent.obj";
+        let mesh = HeMesh::from_obj(&path).unwrap();
+
+        assert!(!mesh.is_consistent());
     }
 }
