@@ -5,8 +5,8 @@ use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 
-use crate::mesh::common::{Edge, Face, Patch, Vertex};
 use crate::mesh::utils::is_gzip;
+use crate::mesh::{Edge, Face, Patch, Vertex};
 
 #[derive(Debug, Clone)]
 pub struct ObjReader {

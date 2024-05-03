@@ -1,4 +1,6 @@
 use crate::geometry::Vector3;
+use crate::mesh::wavefront::ObjReader;
+use crate::mesh::{Face, Patch, Vertex};
 
 #[derive(Debug, Copy, Clone, Default)]
 pub struct HeVertex {
@@ -98,6 +100,24 @@ pub struct HeMesh {
 }
 
 impl HeMesh {
+    /// Construct a HeMesh from its components
+    pub fn new(vertices: &Vec<Vertex>, faces: &Vec<Face>, patches: &Vec<Patch>) -> HeMesh {
+        panic!("not implemented")
+    }
+
+    /// Import a HeMesh from an OBJ file
+    pub fn from_obj(filename: &str) -> std::io::Result<HeMesh> {
+        let mut reader = ObjReader::new(filename);
+        reader.read()?;
+
+        let vertices = reader.vertices();
+        let faces = reader.faces();
+        let patches = reader.patches();
+        let mesh = HeMesh::new(vertices, faces, patches);
+
+        Ok(mesh)
+    }
+
     /// Get a borrowed reference to the vertices
     pub fn vertices(&self) -> &Vec<HeVertex> {
         &self.vertices
