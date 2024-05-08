@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::geometry::Vector3;
 use crate::mesh::wavefront::ObjReader;
@@ -250,6 +250,40 @@ impl HeMesh {
 
         self.patches = patches;
     }
+
+    /// Extract a subset from the mesh by the index of the face. This
+    /// copies the target subset into a new mesh.
+    pub fn extract_faces(&self, faces: &Vec<usize>) -> HeMesh {
+        unimplemented!()
+    }
+
+    /// Extract a subset from the mesh by the patch names. This copies the
+    /// target subset into a new mesh.
+    pub fn extract_patches(&self, patches: &Vec<&str>) -> HeMesh {
+        let mut selected = HashSet::new();
+        let mut index = vec![false; self.n_patches()];
+        let mut faces = vec![];
+
+        for patch in patches.iter() {
+            selected.insert(patch.clone());
+        }
+
+        for (i, patch) in self.patches.iter().enumerate() {
+            if selected.contains(patch.name()) {
+                index[i] = true;
+            }
+        }
+
+        for (i, face) in self.faces.iter().enumerate() {
+            if let Some(patch) = face.patch {
+                if index[patch] {
+                    faces.push(i);
+                }
+            }
+        }
+
+        self.extract_faces(&faces)
+    }
 }
 
 #[derive(Debug, Copy, Clone, Default)]
@@ -475,5 +509,33 @@ mod test {
         mesh1.combine_patches();
 
         assert_eq!(mesh1.n_patches(), 6);
+    }
+
+    #[test]
+    fn test_extract_faces() {
+        let path = "tests/fixtures/box_groups.obj";
+        let mesh1 = HeMesh::from_obj(&path).unwrap();
+
+        let faces = vec![0, 1, 6];
+        let mesh2 = mesh1.extract_faces(&faces);
+
+        assert_eq!(mesh2.n_vertices(), 5);
+        assert_eq!(mesh2.n_faces(), 3);
+        assert_eq!(mesh2.n_half_edges(), 9);
+        assert_eq!(mesh2.n_patches(), 2);
+    }
+
+    #[test]
+    fn test_extract_patches() {
+        let path = "tests/fixtures/box_groups.obj";
+        let mesh1 = HeMesh::from_obj(&path).unwrap();
+
+        let patches: Vec<&str> = vec!["front", "right"];
+        let mesh2 = mesh1.extract_patches(&patches);
+
+        assert_eq!(mesh2.n_vertices(), 5);
+        assert_eq!(mesh2.n_faces(), 3);
+        assert_eq!(mesh2.n_half_edges(), 9);
+        assert_eq!(mesh2.n_patches(), 2);
     }
 }
