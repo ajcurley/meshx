@@ -181,6 +181,75 @@ impl HeMesh {
 
         true
     }
+
+    /// Merge the mesh into the current mesh naively. This strictly copies
+    /// the mesh and does not merge vertices, edges, or faces.
+    pub fn merge(&mut self, other: &HeMesh) {
+        let nv = self.n_vertices();
+        let nf = self.n_faces();
+        let nh = self.n_half_edges();
+        let np = self.n_patches();
+
+        for patch in other.patches() {
+            let patch = patch.clone();
+            self.patches.push(patch);
+        }
+
+        for vertex in other.vertices().iter() {
+            let mut vertex = *vertex;
+            vertex.half_edge += nh;
+            self.vertices.push(vertex);
+        }
+
+        for face in other.faces().iter() {
+            let mut face = *face;
+            face.half_edge += nh;
+
+            if let Some(patch) = face.patch {
+                face.patch = Some(patch + np);
+            }
+
+            self.faces.push(face);
+        }
+
+        for half_edge in other.half_edges().iter() {
+            let mut half_edge = *half_edge;
+            half_edge.origin += nv;
+            half_edge.face += nf;
+            half_edge.prev += nh;
+            half_edge.next += nh;
+
+            if let Some(twin) = half_edge.twin {
+                half_edge.twin = Some(twin + nh);
+            }
+
+            self.half_edges.push(half_edge)
+        }
+    }
+
+    /// Combine patches with the same name explicitly.
+    pub fn combine_patches(&mut self) {
+        let mut patches = vec![];
+        let mut index: HashMap<&str, usize> = HashMap::new();
+
+        for (i, patch) in self.patches.iter().enumerate() {
+            let name = patch.name();
+
+            if !index.contains_key(name) {
+                index.insert(name, i);
+                patches.push(patch.clone());
+            }
+        }
+
+        for face in self.faces.iter_mut() {
+            if let Some(patch) = face.patch {
+                let name = self.patches[patch].name();
+                face.patch = Some(index[name]);
+            }
+        }
+
+        self.patches = patches;
+    }
 }
 
 #[derive(Debug, Copy, Clone, Default)]
@@ -374,5 +443,37 @@ mod test {
         let mesh = HeMesh::from_obj(&path).unwrap();
 
         assert!(!mesh.is_consistent());
+    }
+
+    #[test]
+    fn test_merge() {
+        let path = "tests/fixtures/box.obj";
+        let mut mesh1 = HeMesh::from_obj(&path).unwrap();
+        let mesh2 = HeMesh::from_obj(&path).unwrap();
+
+        mesh1.merge(&mesh2);
+
+        assert_eq!(mesh1.n_vertices(), 16);
+        assert_eq!(mesh1.n_faces(), 24);
+        assert_eq!(mesh1.n_half_edges(), 72);
+        assert_eq!(mesh1.n_patches(), 0);
+    }
+
+    #[test]
+    fn test_combine_patches() {
+        let path = "tests/fixtures/box_groups.obj";
+        let mut mesh1 = HeMesh::from_obj(&path).unwrap();
+        let mesh2 = HeMesh::from_obj(&path).unwrap();
+
+        mesh1.merge(&mesh2);
+
+        assert_eq!(mesh1.n_vertices(), 16);
+        assert_eq!(mesh1.n_faces(), 24);
+        assert_eq!(mesh1.n_half_edges(), 72);
+        assert_eq!(mesh1.n_patches(), 12);
+
+        mesh1.combine_patches();
+
+        assert_eq!(mesh1.n_patches(), 6);
     }
 }
