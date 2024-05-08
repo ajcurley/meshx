@@ -226,6 +226,30 @@ impl HeMesh {
             self.half_edges.push(half_edge)
         }
     }
+
+    /// Combine patches with the same name explicitly.
+    pub fn combine_patches(&mut self) {
+        let mut patches = vec![];
+        let mut index: HashMap<&str, usize> = HashMap::new();
+
+        for (i, patch) in self.patches.iter().enumerate() {
+            let name = patch.name();
+
+            if !index.contains_key(name) {
+                index.insert(name, i);
+                patches.push(patch.clone());
+            }
+        }
+
+        for face in self.faces.iter_mut() {
+            if let Some(patch) = face.patch {
+                let name = self.patches[patch].name();
+                face.patch = Some(index[name]);
+            }
+        }
+
+        self.patches = patches;
+    }
 }
 
 #[derive(Debug, Copy, Clone, Default)]
@@ -433,5 +457,23 @@ mod test {
         assert_eq!(mesh1.n_faces(), 24);
         assert_eq!(mesh1.n_half_edges(), 72);
         assert_eq!(mesh1.n_patches(), 0);
+    }
+
+    #[test]
+    fn test_combine_patches() {
+        let path = "tests/fixtures/box_groups.obj";
+        let mut mesh1 = HeMesh::from_obj(&path).unwrap();
+        let mesh2 = HeMesh::from_obj(&path).unwrap();
+
+        mesh1.merge(&mesh2);
+
+        assert_eq!(mesh1.n_vertices(), 16);
+        assert_eq!(mesh1.n_faces(), 24);
+        assert_eq!(mesh1.n_half_edges(), 72);
+        assert_eq!(mesh1.n_patches(), 12);
+
+        mesh1.combine_patches();
+
+        assert_eq!(mesh1.n_patches(), 6);
     }
 }
