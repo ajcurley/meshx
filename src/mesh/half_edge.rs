@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::geometry::Vector3;
-use crate::mesh::wavefront::ObjReader;
+use crate::mesh::wavefront::{ObjReader, ObjWriter};
 use crate::mesh::{Edge, Face, Patch, Vertex};
 
 #[derive(Debug, Clone, Default)]
@@ -95,6 +95,36 @@ impl HeMesh {
         let mesh = HeMesh::new(vertices, faces, patches);
 
         Ok(mesh)
+    }
+
+    /// Export a HeMesh to an OBJ file
+    pub fn export_obj(&self, filename: &str) -> std::io::Result<()> {
+        let mut vertices = vec![];
+        let mut faces = vec![];
+        let mut patches = vec![];
+
+        for vertex in self.vertices.iter() {
+            let vertex = Vertex::from(vertex.point);
+            vertices.push(vertex);
+        }
+
+        for (i, face) in self.faces.iter().enumerate() {
+            let vertices = self.face_vertices(i);
+            let face = Face::new(vertices, face.patch);
+            faces.push(face);
+        }
+
+        for patch in self.patches.iter() {
+            let name = patch.name().to_string();
+            let patch = Patch::new(name);
+            patches.push(patch);
+        }
+
+        let mut writer = ObjWriter::new();
+        writer.set_vertices(vertices);
+        writer.set_faces(faces);
+        writer.set_patches(patches);
+        writer.write(filename)
     }
 
     /// Get a borrowed reference to the vertices
@@ -536,6 +566,8 @@ impl From<&Patch> for HePatch {
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::fs::File;
+    use std::io::prelude::*;
 
     #[test]
     fn test_from_obj() {
@@ -564,6 +596,30 @@ mod test {
     fn test_from_obj_nonmanifold() {
         let path = "tests/fixtures/box_nonmanifold.obj";
         HeMesh::from_obj(&path).unwrap();
+    }
+
+    #[test]
+    fn test_export_obj() {
+        let path = "tests/fixtures/box.obj";
+        let mesh = HeMesh::from_obj(&path).unwrap();
+
+        let out_path = "/tmp/test_export_obj.obj";
+        mesh.export_obj(&out_path).unwrap();
+
+        let mut expected_content = String::new();
+        let mut actual_content = String::new();
+
+        File::open(&path)
+            .unwrap()
+            .read_to_string(&mut expected_content)
+            .unwrap();
+
+        File::open(&out_path)
+            .unwrap()
+            .read_to_string(&mut actual_content)
+            .unwrap();
+
+        assert_eq!(actual_content, expected_content);
     }
 
     #[test]
