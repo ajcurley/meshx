@@ -38,6 +38,12 @@ impl std::ops::IndexMut<usize> for Vertex {
     }
 }
 
+impl From<Vector3> for Vertex {
+    fn from(value: Vector3) -> Vertex {
+        Vertex::new(value[0], value[1], value[2])
+    }
+}
+
 impl Into<Vector3> for Vertex {
     fn into(self) -> Vector3 {
         Vector3::new(self.x, self.y, self.z)
