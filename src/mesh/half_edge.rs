@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::geometry::Vector3;
 use crate::mesh::wavefront::{ObjReader, ObjWriter};
@@ -432,6 +432,43 @@ impl HeMesh {
         }
 
         self.extract_faces(&faces)
+    }
+
+    /// Orient the mesh such that the faces in each component have the same
+    /// directed normal relative to each other. This does not ensure that the
+    /// components' orientation are consistent.
+    pub fn orient(&self) {
+        unimplemented!()
+    }
+
+    /// Compute the faces for each contiguous component in the mesh.
+    pub fn components(&self) -> Vec<Vec<usize>> {
+        let mut components = vec![];
+        let mut visited = vec![false; self.n_faces()];
+
+        for next in 0..visited.len() {
+            if !visited[next] {
+                let mut queue = VecDeque::from([next]);
+                let mut component = vec![];
+
+                while let Some(current) = queue.pop_front() {
+                    if !visited[current] {
+                        visited[current] = true;
+                        component.push(current);
+
+                        for neighbor in self.face_neighbors(current) {
+                            if !visited[neighbor] {
+                                queue.push_back(neighbor);
+                            }
+                        }
+                    }
+                }
+
+                components.push(component);
+            }
+        }
+
+        components
     }
 }
 
