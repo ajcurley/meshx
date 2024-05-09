@@ -37,19 +37,18 @@ impl HeMesh {
             let count = mesh.half_edges.len();
             let n = face.vertices().len();
 
+            let mut next_offset = (0..n).collect::<Vec<usize>>();
+            let mut prev_offset = (0..n).collect::<Vec<usize>>();
+            next_offset.rotate_left(1);
+            prev_offset.rotate_right(1);
+
             for (edge_id, edge) in face.edges().iter().enumerate() {
                 let half_edge_id = count + edge_id;
                 let mut half_edge = HeHalfEdge::default();
                 half_edge.origin = edge[0];
                 half_edge.face = face_id;
-
-                if edge_id == 0 {
-                    half_edge.prev = count + n - 1;
-                    half_edge.next = count + edge_id + 1;
-                } else {
-                    half_edge.prev = count + edge_id - 1;
-                    half_edge.next = count;
-                }
+                half_edge.prev = count + prev_offset[edge_id];
+                half_edge.next = count + next_offset[edge_id];
 
                 // Insert the half edge and update the originating half edge
                 // for the origin (vertex).
@@ -182,6 +181,86 @@ impl HeMesh {
         true
     }
 
+    /// Compute the neighboring vertices for a vertex by index. This is only
+    /// valid for closed oriented meshes.
+    pub fn vertex_neighbors(&self, index: usize) -> Vec<usize> {
+        let vertex = self.vertices[index];
+        let mut current = vertex.half_edge;
+        let mut neighbors = vec![];
+
+        loop {
+            let half_edge = self.half_edges[current];
+            let prev = self.half_edges[half_edge.prev];
+            neighbors.push(prev.origin);
+
+            current = prev.twin.expect("mesh must be closed");
+
+            if current == vertex.half_edge {
+                break;
+            }
+        }
+
+        neighbors
+    }
+
+    /// Compute the faces containing a vertex by index. This is only valid
+    /// for closed oriented meshes.
+    pub fn vertex_faces(&self, index: usize) -> Vec<usize> {
+        let vertex = self.vertices[index];
+        let mut current = vertex.half_edge;
+        let mut faces = vec![];
+
+        loop {
+            let half_edge = self.half_edges[current];
+            faces.push(half_edge.face);
+
+            let prev = self.half_edges[half_edge.prev];
+            current = prev.twin.expect("mesh must be closed");
+
+            if current == vertex.half_edge {
+                break;
+            }
+        }
+
+        faces
+    }
+
+    /// Compute the vertices defining a face by index
+    pub fn face_vertices(&self, index: usize) -> Vec<usize> {
+        self.face_half_edges(index)
+            .iter()
+            .map(|&i| self.half_edges[i].origin)
+            .collect()
+    }
+
+    /// Compute the neighboring faces for a face by index
+    pub fn face_neighbors(&self, index: usize) -> Vec<usize> {
+        self.face_half_edges(index)
+            .iter()
+            .map(|&i| self.half_edges[i])
+            .filter(|h| !h.is_boundary())
+            .map(|h| self.half_edges[h.twin.unwrap()].face)
+            .collect()
+    }
+
+    /// Compute the ordered half edges defining the boundary of a face by index
+    pub fn face_half_edges(&self, index: usize) -> Vec<usize> {
+        let face = self.faces[index];
+        let mut current = face.half_edge;
+        let mut half_edges = vec![];
+
+        loop {
+            half_edges.push(current);
+            current = self.half_edges[current].next;
+
+            if current == face.half_edge {
+                break;
+            }
+        }
+
+        half_edges
+    }
+
     /// Merge the mesh into the current mesh naively. This strictly copies
     /// the mesh and does not merge vertices, edges, or faces.
     pub fn merge(&mut self, other: &HeMesh) {
@@ -253,7 +332,7 @@ impl HeMesh {
 
     /// Extract a subset from the mesh by the index of the face. This
     /// copies the target subset into a new mesh.
-    pub fn extract_faces(&self, faces: &Vec<usize>) -> HeMesh {
+    pub fn extract_faces(&self, _faces: &Vec<usize>) -> HeMesh {
         unimplemented!()
     }
 
@@ -265,7 +344,7 @@ impl HeMesh {
         let mut faces = vec![];
 
         for patch in patches.iter() {
-            selected.insert(patch.clone());
+            selected.insert(patch.to_string());
         }
 
         for (i, patch) in self.patches.iter().enumerate() {
@@ -477,6 +556,84 @@ mod test {
         let mesh = HeMesh::from_obj(&path).unwrap();
 
         assert!(!mesh.is_consistent());
+    }
+
+    #[test]
+    fn test_vertex_neighbors() {
+        let path = "tests/fixtures/box.obj";
+        let mesh = HeMesh::from_obj(&path).unwrap();
+
+        let neighbors = mesh.vertex_neighbors(1);
+        dbg!(&neighbors);
+
+        assert_eq!(neighbors.len(), 5);
+        assert_eq!(neighbors[0], 3);
+        assert_eq!(neighbors[1], 2);
+        assert_eq!(neighbors[2], 0);
+        assert_eq!(neighbors[3], 4);
+        assert_eq!(neighbors[4], 5);
+    }
+
+    #[test]
+    #[ignore]
+    fn test_vertex_neighbors_inverted() {
+        // TODO: implement
+    }
+
+    #[test]
+    fn test_vertex_faces() {
+        let path = "tests/fixtures/box.obj";
+        let mesh = HeMesh::from_obj(&path).unwrap();
+
+        let faces = mesh.vertex_faces(1);
+
+        assert_eq!(faces.len(), 5);
+        assert_eq!(faces[0], 10);
+        assert_eq!(faces[1], 1);
+        assert_eq!(faces[2], 0);
+        assert_eq!(faces[3], 4);
+        assert_eq!(faces[4], 5);
+    }
+
+    #[test]
+    #[ignore]
+    fn test_vertex_faces_inverted() {
+        // TODO: implement
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_vertex_faces_open() {
+        let path = "tests/fixtures/box_open.obj";
+        let mesh = HeMesh::from_obj(&path).unwrap();
+
+        mesh.vertex_faces(2);
+    }
+
+    #[test]
+    fn test_face_neighbors() {
+        let path = "tests/fixtures/box.obj";
+        let mesh = HeMesh::from_obj(&path).unwrap();
+
+        let neighbors = mesh.face_neighbors(1);
+
+        assert_eq!(neighbors.len(), 3);
+        assert_eq!(neighbors[0], 10);
+        assert_eq!(neighbors[1], 6);
+        assert_eq!(neighbors[2], 0);
+    }
+
+    #[test]
+    fn test_face_half_edges() {
+        let path = "tests/fixtures/box.obj";
+        let mesh = HeMesh::from_obj(&path).unwrap();
+
+        let half_edges = mesh.face_half_edges(1);
+
+        assert_eq!(half_edges.len(), 3);
+        assert_eq!(mesh.half_edge(half_edges[0]).origin, 1);
+        assert_eq!(mesh.half_edge(half_edges[1]).origin, 3);
+        assert_eq!(mesh.half_edge(half_edges[2]).origin, 2);
     }
 
     #[test]
