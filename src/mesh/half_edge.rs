@@ -332,8 +332,48 @@ impl HeMesh {
 
     /// Extract a subset from the mesh by the index of the face. This
     /// copies the target subset into a new mesh.
-    pub fn extract_faces(&self, _faces: &Vec<usize>) -> HeMesh {
-        unimplemented!()
+    pub fn extract_faces(&self, face_ids: &Vec<usize>) -> HeMesh {
+        let mut faces = Vec::<Face>::with_capacity(face_ids.len());
+        let mut vertices = vec![];
+        let mut patches = vec![];
+        let mut index_vertices = HashMap::new();
+        let mut index_patches = HashMap::new();
+
+        for &face_id in face_ids.iter() {
+            let mut vertices_ = self.face_vertices(face_id);
+            let mut patch_ = None;
+
+            for old_id in vertices_.iter_mut() {
+                if !index_vertices.contains_key(old_id) {
+                    let new_id = index_vertices.len();
+                    index_vertices.insert(*old_id, new_id);
+
+                    let point = self.vertices[*old_id].point;
+                    let vertex = Vertex::from(point);
+                    vertices.push(vertex);
+                }
+
+                *old_id = index_vertices[old_id];
+            }
+
+            if let Some(old_id) = self.faces[face_id].patch {
+                if !index_patches.contains_key(&old_id) {
+                    let new_id = index_patches.len();
+                    index_patches.insert(old_id, new_id);
+
+                    let name = self.patches[old_id].name().to_string();
+                    let patch = Patch::new(name);
+                    patches.push(patch);
+                }
+
+                patch_ = Some(index_patches[&old_id]);
+            }
+
+            let face = Face::new(vertices_, patch_);
+            faces.push(face);
+        }
+
+        HeMesh::new(&vertices, &faces, &patches)
     }
 
     /// Extract a subset from the mesh by the patch names. This copies the
@@ -564,7 +604,6 @@ mod test {
         let mesh = HeMesh::from_obj(&path).unwrap();
 
         let neighbors = mesh.vertex_neighbors(1);
-        dbg!(&neighbors);
 
         assert_eq!(neighbors.len(), 5);
         assert_eq!(neighbors[0], 3);
@@ -689,10 +728,11 @@ mod test {
 
         let patches: Vec<&str> = vec!["front", "right"];
         let mesh2 = mesh1.extract_patches(&patches);
+        dbg!(&mesh2);
 
-        assert_eq!(mesh2.n_vertices(), 5);
-        assert_eq!(mesh2.n_faces(), 3);
-        assert_eq!(mesh2.n_half_edges(), 9);
+        assert_eq!(mesh2.n_vertices(), 6);
+        assert_eq!(mesh2.n_faces(), 4);
+        assert_eq!(mesh2.n_half_edges(), 12);
         assert_eq!(mesh2.n_patches(), 2);
     }
 }
