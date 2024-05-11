@@ -828,4 +828,32 @@ mod test {
         assert_eq!(mesh2.n_half_edges(), 12);
         assert_eq!(mesh2.n_patches(), 2);
     }
+
+    #[test]
+    fn test_components() {
+        let path = "tests/fixtures/box.obj";
+        let mesh = HeMesh::from_obj(&path).unwrap();
+
+        let components = mesh.components();
+
+        assert_eq!(components.len(), 1);
+        assert_eq!(components[0].len(), mesh.n_faces());
+    }
+
+    #[test]
+    fn test_components_multi() {
+        let path = "tests/fixtures/box.obj";
+        let mesh1 = HeMesh::from_obj(path).unwrap();
+
+        let path = "tests/fixtures/sphere.obj";
+        let mesh2 = HeMesh::from_obj(path).unwrap();
+
+        let mut mesh3 = mesh1.clone();
+        mesh3.merge(&mesh2);
+        let components = mesh3.components();
+
+        assert_eq!(components.len(), 2);
+        assert_eq!(components[0].len(), mesh1.n_faces());
+        assert_eq!(components[1].len(), mesh2.n_faces());
+    }
 }
