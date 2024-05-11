@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::geometry::Vector3;
 use crate::mesh::wavefront::{ObjReader, ObjWriter};
@@ -209,6 +209,29 @@ impl HeMesh {
         }
 
         true
+    }
+
+    /// Compute if the neighboring pair of mesh faces are consistently
+    /// oriented. If the faces do not share an edge, return false.
+    pub fn is_consistent_faces(&self, i: usize, j: usize) -> bool {
+        let mut index = HashSet::new();
+
+        for k in self.face_half_edges(i) {
+            index.insert(k);
+        }
+
+        for k in self.face_half_edges(j) {
+            let half_edge = &self.half_edges[k];
+
+            if let Some(twin) = half_edge.twin {
+                if index.contains(&twin) {
+                    let twin = &self.half_edges[twin];
+                    return half_edge.origin != twin.origin;
+                }
+            }
+        }
+
+        false
     }
 
     /// Compute the neighboring vertices for a vertex by index. This is only
@@ -432,6 +455,87 @@ impl HeMesh {
         }
 
         self.extract_faces(&faces)
+    }
+
+    /// Orient the mesh such that the faces in each component have the same
+    /// directed normal relative to each other. This does not ensure that the
+    /// components' orientation are consistent.
+    pub fn orient(&mut self) -> usize {
+        let mut oriented = vec![false; self.n_faces()];
+        let mut count = 0;
+
+        for component in self.components() {
+            let next = component[0];
+            let mut queue = VecDeque::from([next]);
+
+            while let Some(current) = queue.pop_front() {
+                if !oriented[current] {
+                    oriented[current] = true;
+
+                    for neighbor in self.face_neighbors(current) {
+                        if !oriented[neighbor] {
+                            queue.push_back(neighbor);
+
+                            if !self.is_consistent_faces(current, neighbor) {
+                                self.flip_face(neighbor);
+                                count += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        count
+    }
+
+    /// Compute the faces for each contiguous component in the mesh.
+    pub fn components(&self) -> Vec<Vec<usize>> {
+        let mut components = vec![];
+        let mut visited = vec![false; self.n_faces()];
+
+        for next in 0..visited.len() {
+            if !visited[next] {
+                let mut queue = VecDeque::from([next]);
+                let mut component = vec![];
+
+                while let Some(current) = queue.pop_front() {
+                    if !visited[current] {
+                        visited[current] = true;
+                        component.push(current);
+
+                        for neighbor in self.face_neighbors(current) {
+                            if !visited[neighbor] {
+                                queue.push_back(neighbor);
+                            }
+                        }
+                    }
+                }
+
+                components.push(component);
+            }
+        }
+
+        components
+    }
+
+    /// Flip the orientation of a face. This reverses the direction of all
+    /// half edges for the face.
+    pub fn flip_face(&mut self, index: usize) {
+        self.face_half_edges(index)
+            .iter()
+            .for_each(|&i| self.flip_half_edge(i));
+    }
+
+    /// Flip the orientation of a half edge.
+    pub fn flip_half_edge(&mut self, index: usize) {
+        let half_edge = self.half_edges[index];
+        let prev = half_edge.next;
+        let origin = self.half_edges[prev].origin;
+
+        self.half_edges[index].next = half_edge.prev;
+        self.half_edges[index].prev = prev;
+        self.half_edges[index].origin = origin;
     }
 }
 
@@ -784,11 +888,64 @@ mod test {
 
         let patches: Vec<&str> = vec!["front", "right"];
         let mesh2 = mesh1.extract_patches(&patches);
-        dbg!(&mesh2);
 
         assert_eq!(mesh2.n_vertices(), 6);
         assert_eq!(mesh2.n_faces(), 4);
         assert_eq!(mesh2.n_half_edges(), 12);
         assert_eq!(mesh2.n_patches(), 2);
+    }
+
+    #[test]
+    fn test_components() {
+        let path = "tests/fixtures/box.obj";
+        let mesh = HeMesh::from_obj(&path).unwrap();
+
+        let components = mesh.components();
+
+        assert_eq!(components.len(), 1);
+        assert_eq!(components[0].len(), mesh.n_faces());
+    }
+
+    #[test]
+    fn test_components_multi() {
+        let path = "tests/fixtures/box.obj";
+        let mesh1 = HeMesh::from_obj(path).unwrap();
+
+        let path = "tests/fixtures/sphere.obj";
+        let mesh2 = HeMesh::from_obj(path).unwrap();
+
+        let mut mesh3 = mesh1.clone();
+        mesh3.merge(&mesh2);
+        let components = mesh3.components();
+
+        assert_eq!(components.len(), 2);
+        assert_eq!(components[0].len(), mesh1.n_faces());
+        assert_eq!(components[1].len(), mesh2.n_faces());
+    }
+
+    #[test]
+    fn test_orient() {
+        let path = "tests/fixtures/box_inconsistent.obj";
+        let mut mesh = HeMesh::from_obj(&path).unwrap();
+
+        assert!(!mesh.is_consistent());
+
+        let count = mesh.orient();
+
+        assert!(mesh.is_consistent());
+        assert_eq!(count, 3);
+    }
+
+    #[test]
+    fn test_orient_consistent() {
+        let path = "tests/fixtures/box.obj";
+        let mut mesh = HeMesh::from_obj(&path).unwrap();
+
+        assert!(mesh.is_consistent());
+
+        let count = mesh.orient();
+
+        assert!(mesh.is_consistent());
+        assert_eq!(count, 0);
     }
 }
