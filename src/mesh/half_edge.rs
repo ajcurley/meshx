@@ -334,6 +334,48 @@ impl HeMesh {
         half_edges
     }
 
+    /// Compute the unit normal vector of a face.
+    pub fn face_normal(&self, index: usize) -> Vector3 {
+        let mut normal = Vector3::zeros();
+        let index = self.face_vertices(index);
+        let n = index.len();
+
+        for i in 0..n {
+            let p = self.vertices[index[i]].point;
+            let q = self.vertices[index[(i + 1) % n]].point;
+            normal += Vector3::cross(&p, &q);
+        }
+
+        normal.unit()
+    }
+
+    /// Compute the feature edges using a threshold angle in radians. This will
+    /// return strictly one half edge of the half edge pairs defining an edge.
+    pub fn feature_edges(&self, angle: f64) -> Vec<usize> {
+        let mut visited = vec![false; self.n_half_edges()];
+        let mut features = vec![];
+
+        for (i, half_edge) in self.half_edges.iter().enumerate() {
+            if !visited[i] {
+                visited[i] = true;
+
+                if let Some(twin) = half_edge.twin {
+                    visited[twin] = true;
+
+                    let twin = self.half_edges[twin];
+                    let u = self.face_normal(half_edge.face);
+                    let v = self.face_normal(twin.face);
+
+                    if Vector3::angle(&u, &v) >= angle {
+                        features.push(i);
+                    }
+                }
+            }
+        }
+
+        features
+    }
+
     /// Merge the mesh into the current mesh naively. This strictly copies
     /// the mesh and does not merge vertices, edges, or faces.
     pub fn merge(&mut self, other: &HeMesh) {
@@ -867,6 +909,26 @@ mod test {
     }
 
     #[test]
+    fn test_face_normal() {
+        let path = "tests/fixtures/box.obj";
+        let mesh = HeMesh::from_obj(&path).unwrap();
+
+        let normal = mesh.face_normal(0);
+
+        assert_eq!(normal, Vector3::new(-1., 0., 0.));
+    }
+
+    #[test]
+    fn test_face_normal_polygon() {
+        let path = "tests/fixtures/box_quads.obj";
+        let mesh = HeMesh::from_obj(&path).unwrap();
+
+        let normal = mesh.face_normal(0);
+
+        assert_eq!(normal, Vector3::new(-1., 0., 0.));
+    }
+
+    #[test]
     fn test_merge() {
         let path = "tests/fixtures/box.obj";
         let mut mesh1 = HeMesh::from_obj(&path).unwrap();
@@ -978,5 +1040,27 @@ mod test {
 
         assert!(mesh.is_consistent());
         assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn test_feature_edges() {
+        let path = "tests/fixtures/box.obj";
+        let mesh = HeMesh::from_obj(&path).unwrap();
+
+        let angle = 30. * std::f64::consts::PI / 180.;
+        let features = mesh.feature_edges(angle);
+
+        assert_eq!(features.len(), 12);
+    }
+
+    #[test]
+    fn test_feature_edges_polygon() {
+        let path = "tests/fixtures/box_quads.obj";
+        let mesh = HeMesh::from_obj(&path).unwrap();
+
+        let angle = 30. * std::f64::consts::PI / 180.;
+        let features = mesh.feature_edges(angle);
+
+        assert_eq!(features.len(), 12);
     }
 }
