@@ -211,6 +211,29 @@ impl HeMesh {
         true
     }
 
+    /// Compute if the neighboring pair of mesh faces are consistently
+    /// oriented. If the faces do not share an edge, return false.
+    pub fn is_consistent_faces(&self, i: usize, j: usize) -> bool {
+        let mut index = HashSet::new();
+
+        for k in self.face_half_edges(i) {
+            index.insert(k);
+        }
+
+        for k in self.face_half_edges(j) {
+            let half_edge = &self.half_edges[k];
+
+            if let Some(twin) = half_edge.twin {
+                if index.contains(&twin) {
+                    let twin = &self.half_edges[twin];
+                    return half_edge.origin != twin.origin;
+                }
+            }
+        }
+
+        false
+    }
+
     /// Compute the neighboring vertices for a vertex by index. This is only
     /// valid for closed oriented meshes.
     pub fn vertex_neighbors(&self, index: usize) -> Vec<usize> {
@@ -437,8 +460,33 @@ impl HeMesh {
     /// Orient the mesh such that the faces in each component have the same
     /// directed normal relative to each other. This does not ensure that the
     /// components' orientation are consistent.
-    pub fn orient(&self) {
-        unimplemented!()
+    pub fn orient(&mut self) -> usize {
+        let mut oriented = vec![false; self.n_faces()];
+        let mut count = 0;
+
+        for component in self.components() {
+            let next = component[0];
+            let mut queue = VecDeque::from([next]);
+
+            while let Some(current) = queue.pop_front() {
+                if !oriented[current] {
+                    oriented[current] = true;
+
+                    for neighbor in self.face_neighbors(current) {
+                        if !oriented[neighbor] {
+                            queue.push_back(neighbor);
+
+                            if !self.is_consistent_faces(current, neighbor) {
+                                self.flip_face(neighbor);
+                                count += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        count
     }
 
     /// Compute the faces for each contiguous component in the mesh.
@@ -469,6 +517,20 @@ impl HeMesh {
         }
 
         components
+    }
+
+    /// Flip the orientation of a face. This reverses the direction of all
+    /// half edges for the face.
+    pub fn flip_face(&mut self, face: usize) {
+        for i in self.face_half_edges(face) {
+            let half_edge = self.half_edges[i];
+            let next = half_edge.next;
+            let next_origin = self.half_edges[next].origin;
+
+            self.half_edges[i].next = half_edge.prev;
+            self.half_edges[i].prev = next;
+            self.half_edges[i].origin = next_origin;
+        }
     }
 }
 
@@ -821,7 +883,6 @@ mod test {
 
         let patches: Vec<&str> = vec!["front", "right"];
         let mesh2 = mesh1.extract_patches(&patches);
-        dbg!(&mesh2);
 
         assert_eq!(mesh2.n_vertices(), 6);
         assert_eq!(mesh2.n_faces(), 4);
@@ -855,5 +916,31 @@ mod test {
         assert_eq!(components.len(), 2);
         assert_eq!(components[0].len(), mesh1.n_faces());
         assert_eq!(components[1].len(), mesh2.n_faces());
+    }
+
+    #[test]
+    fn test_orient() {
+        let path = "tests/fixtures/box_inconsistent.obj";
+        let mut mesh = HeMesh::from_obj(&path).unwrap();
+
+        assert!(!mesh.is_consistent());
+
+        let count = mesh.orient();
+
+        assert!(mesh.is_consistent());
+        assert_eq!(count, 3);
+    }
+
+    #[test]
+    fn test_orient_consistent() {
+        let path = "tests/fixtures/box.obj";
+        let mut mesh = HeMesh::from_obj(&path).unwrap();
+
+        assert!(mesh.is_consistent());
+
+        let count = mesh.orient();
+
+        assert!(mesh.is_consistent());
+        assert_eq!(count, 0);
     }
 }
