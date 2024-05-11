@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use crate::geometry::Vector3;
+use crate::geometry::{Aabb, Vector3};
 use crate::mesh::wavefront::{ObjReader, ObjWriter};
 use crate::mesh::{Edge, Face, Patch, Vertex};
 
@@ -185,6 +185,26 @@ impl HeMesh {
     /// Get the number of patches
     pub fn n_patches(&self) -> usize {
         self.patches.len()
+    }
+
+    /// Compute the axis-aligned bounding box
+    pub fn aabb(&self) -> Aabb {
+        let mut min = Vector3::ones() * std::f64::INFINITY;
+        let mut max = Vector3::ones() * std::f64::NEG_INFINITY;
+
+        for vertex in self.vertices.iter() {
+            for i in 0..3 {
+                if vertex.point[i] < min[i] {
+                    min[i] = vertex.point[i]
+                }
+
+                if vertex.point[i] > max[i] {
+                    max[i] = vertex.point[i];
+                }
+            }
+        }
+
+        Aabb::from_bounds(min, max)
     }
 
     /// Compute if the mesh is closed
@@ -724,6 +744,17 @@ mod test {
             .unwrap();
 
         assert_eq!(actual_content, expected_content);
+    }
+
+    #[test]
+    fn test_aabb() {
+        let path = "tests/fixtures/box.obj";
+        let mesh = HeMesh::from_obj(&path).unwrap();
+
+        let aabb = mesh.aabb();
+
+        assert_eq!(aabb.min(), Vector3::new(-0.5, -0.5, -0.5));
+        assert_eq!(aabb.max(), Vector3::new(0.5, 0.5, 0.5));
     }
 
     #[test]
