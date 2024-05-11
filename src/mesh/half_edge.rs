@@ -521,16 +521,21 @@ impl HeMesh {
 
     /// Flip the orientation of a face. This reverses the direction of all
     /// half edges for the face.
-    pub fn flip_face(&mut self, face: usize) {
-        for i in self.face_half_edges(face) {
-            let half_edge = self.half_edges[i];
-            let next = half_edge.next;
-            let next_origin = self.half_edges[next].origin;
+    pub fn flip_face(&mut self, index: usize) {
+        self.face_half_edges(index)
+            .iter()
+            .for_each(|&i| self.flip_half_edge(i));
+    }
 
-            self.half_edges[i].next = half_edge.prev;
-            self.half_edges[i].prev = next;
-            self.half_edges[i].origin = next_origin;
-        }
+    /// Flip the orientation of a half edge.
+    pub fn flip_half_edge(&mut self, index: usize) {
+        let half_edge = self.half_edges[index];
+        let prev = half_edge.next;
+        let origin = self.half_edges[prev].origin;
+
+        self.half_edges[index].next = half_edge.prev;
+        self.half_edges[index].prev = prev;
+        self.half_edges[index].origin = origin;
     }
 }
 
