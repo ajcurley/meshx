@@ -33,9 +33,19 @@ where
         }
     }
 
+    /// Get a borrowed reference to an item
+    pub fn item(&self, index: usize) -> &T {
+        &self.items[index]
+    }
+
     /// Get a borrowed reference to the items
     pub fn items(&self) -> &Vec<T> {
         &self.items
+    }
+
+    /// Get a borrowed reference to a node
+    pub fn node(&self, code: usize) -> &OctreeNode {
+        &self.nodes[&code]
     }
 
     /// Get a mutable reference to a node
@@ -43,7 +53,8 @@ where
         self.nodes.get_mut(&code).expect("octree node not found")
     }
 
-    /// Insert an item
+    /// Insert an item into the Octree. The item may be indexed on one or
+    /// more nodes. Items must be strictly inside the Octree bounds.
     pub fn insert(&mut self, item: T) {
         let index = self.items.len();
         let mut queue = vec![1];
