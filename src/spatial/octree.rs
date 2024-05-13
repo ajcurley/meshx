@@ -38,6 +38,11 @@ where
         &self.items
     }
 
+    /// Get a mutable reference to a node
+    fn node_mut(&mut self, code: usize) -> &mut OctreeNode {
+        self.nodes.get_mut(&code).expect("octree node not found")
+    }
+
     /// Insert an item
     pub fn insert(&mut self, item: T) {
         let index = self.items.len();
@@ -45,7 +50,7 @@ where
         let mut codes = vec![];
 
         while let Some(code) = queue.pop() {
-            let node = self.nodes.get_mut(&code).expect("octree node not found");
+            let node = self.node_mut(code);
 
             if item.intersects(&node.aabb) {
                 if node.is_leaf {
@@ -74,7 +79,7 @@ where
     /// Split an internal (non-leaf) node and redistribute any indexed
     /// items amongst the children leaf nodes.
     pub fn split(&mut self, code: usize) -> Vec<usize> {
-        let node = self.nodes.get_mut(&code).expect("octree node not found");
+        let node = self.node_mut(code);
 
         if !node.can_split() {
             panic!("octree node cannot be split");
