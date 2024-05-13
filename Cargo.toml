@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 flate2 = { version = "1", features = ["zlib"] }
+rustc-hash = "1.1"
 
 [profile.dev]
 opt-level = 3

@@ -40,6 +40,18 @@ impl Aabb {
     pub fn max(&self) -> Vector3 {
         self.center + self.halfsize
     }
+
+    /// Compute the octant axis-aligned bounding box
+    pub fn octant(&self, octant: usize) -> Aabb {
+        let h = self.halfsize() * 0.5;
+
+        let dx = if (octant & 4) == 0 { -h[0] } else { h[0] };
+        let dy = if (octant & 2) == 0 { -h[1] } else { h[1] };
+        let dz = if (octant & 1) == 0 { -h[2] } else { h[2] };
+        let center = self.center + Vector3::new(dx, dy, dz);
+
+        Aabb::new(center, h)
+    }
 }
 
 impl Intersects<Aabb> for Aabb {
