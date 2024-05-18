@@ -28,6 +28,21 @@ impl Ray {
     pub fn direction(&self) -> Vector3 {
         self.direction
     }
+
+    /// Check for a spatial intersection with an Aabb
+    pub fn intersects_aabb(&self, aabb: &Aabb) -> bool {
+        self.intersects(aabb)
+    }
+
+    /// Check for a spatial intersection with a Sphere
+    pub fn intersects_sphere(&self, sphere: &Sphere) -> bool {
+        self.intersects(sphere)
+    }
+
+    /// Check for a spatial intersection with a Triangle
+    pub fn intersects_triangle(&self, triangle: &Triangle) -> bool {
+        self.intersects(triangle)
+    }
 }
 
 impl Intersects<Aabb> for Ray {
