@@ -89,6 +89,16 @@ impl Vector3 {
         }
     }
 
+    /// Check for a spatial intersection with an Aabb
+    pub fn intersects_aabb(&self, aabb: &Aabb) -> bool {
+        self.intersects(aabb)
+    }
+
+    /// Check for a spatial intersection with a Sphere
+    pub fn intersects_sphere(&self, sphere: &Sphere) -> bool {
+        self.intersects(sphere)
+    }
+
     /// (Python) Get the value at the index
     pub fn __getitem__(&self, index: usize) -> PyResult<f64> {
         if index >= 3 {
