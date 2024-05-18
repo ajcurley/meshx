@@ -1,6 +1,7 @@
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::geometry::{Aabb, Intersects};
+use crate::spatial::Search;
 
 /// Maximum depth of an OctreeNode in an Octree
 const MAX_DEPTH: usize = (std::mem::size_of::<usize>() * 8 - 1) / 3;
@@ -117,6 +118,36 @@ where
         }
 
         children
+    }
+}
+
+impl<T, Q> Search<Q> for Octree<T>
+where
+    T: Intersects<Aabb> + Intersects<Q>,
+    Q: Intersects<Aabb>,
+{
+    fn search(&self, query: &Q) -> Vec<usize> {
+        let mut results = FxHashSet::default();
+        let mut queue = vec![1];
+
+        while let Some(code) = queue.pop() {
+            let node = self.node(code);
+
+            if query.intersects(&node.aabb) {
+                if node.is_leaf {
+                    for index in node.items.iter() {
+                        if !results.contains(index) && self.items[*index].intersects(query) {
+                            results.insert(*index);
+                        }
+                    }
+                } else {
+                    let mut children = node.children();
+                    queue.append(&mut children);
+                }
+            }
+        }
+
+        results.into_iter().collect()
     }
 }
 
@@ -250,5 +281,43 @@ mod test {
 
         let point = Vector3::ones();
         octree.insert(point);
+    }
+
+    #[test]
+    fn test_search() {
+        let aabb = Aabb::unit();
+        let mut octree = Octree::<Vector3>::new(aabb);
+
+        for i in 0..51 {
+            let value = (i as f64) / 100. - 0.25;
+            let point = Vector3::new(value, value, value);
+            octree.insert(point);
+        }
+
+        let center = Vector3::new(0.2, 0.2, 0.2);
+        let halfsize = Vector3::new(0.05, 0.05, 0.05);
+        let query = Aabb::new(center, halfsize);
+        let results = octree.search(&query);
+
+        assert_eq!(results.len(), 11);
+    }
+
+    #[test]
+    fn test_search_no_results() {
+        let aabb = Aabb::unit();
+        let mut octree = Octree::<Vector3>::new(aabb);
+
+        for i in 0..51 {
+            let value = (i as f64) / 100. - 0.25;
+            let point = Vector3::new(value, value, value);
+            octree.insert(point);
+        }
+
+        let center = Vector3::new(0.2, -0.2, 0.2);
+        let halfsize = Vector3::new(0.05, 0.05, 0.05);
+        let query = Aabb::new(center, halfsize);
+        let results = octree.search(&query);
+
+        assert_eq!(results.len(), 0);
     }
 }
