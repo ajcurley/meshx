@@ -196,3 +196,59 @@ impl OctreeNode {
         self.can_split() && self.items.len() > MAX_ITEMS_PER_NODE
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::geometry::Vector3;
+
+    #[test]
+    fn test_insert() {
+        let aabb = Aabb::unit();
+        let mut octree = Octree::<Vector3>::new(aabb);
+
+        let point = Vector3::zeros();
+        octree.insert(point);
+
+        assert_eq!(octree.nodes.len(), 1);
+        assert_eq!(octree.items.len(), 1);
+
+        let items = octree.node(1).items();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0], 0);
+    }
+
+    #[test]
+    fn test_insert_split() {
+        let aabb = Aabb::unit();
+        let mut octree = Octree::<Vector3>::new(aabb);
+
+        for i in 0..51 {
+            let value = (i as f64) / 100. - 0.25;
+            let point = Vector3::new(value, value, value);
+            octree.insert(point);
+        }
+
+        assert_eq!(octree.nodes.len(), 9);
+        assert_eq!(octree.items.len(), 51);
+
+        assert_eq!(octree.node(8).items.len(), 26);
+        assert_eq!(octree.node(9).items.len(), 1);
+        assert_eq!(octree.node(10).items.len(), 1);
+        assert_eq!(octree.node(11).items.len(), 1);
+        assert_eq!(octree.node(12).items.len(), 1);
+        assert_eq!(octree.node(13).items.len(), 1);
+        assert_eq!(octree.node(14).items.len(), 1);
+        assert_eq!(octree.node(15).items.len(), 26);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_insert_outside() {
+        let aabb = Aabb::unit();
+        let mut octree = Octree::<Vector3>::new(aabb);
+
+        let point = Vector3::ones();
+        octree.insert(point);
+    }
+}

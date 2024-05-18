@@ -21,6 +21,13 @@ impl Aabb {
         Aabb::new(center, halfsize)
     }
 
+    /// Construct a unit Aabb
+    pub fn unit() -> Aabb {
+        let center = Vector3::zeros();
+        let halfsize = Vector3::new(0.5, 0.5, 0.5);
+        Aabb::new(center, halfsize)
+    }
+
     /// Get the center
     pub fn center(&self) -> Vector3 {
         self.center
