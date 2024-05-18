@@ -1,7 +1,7 @@
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::geometry::{Aabb, Intersects};
-use crate::spatial::Search;
+use crate::spatial::{Search, SearchMany};
 
 /// Maximum depth of an OctreeNode in an Octree
 const MAX_DEPTH: usize = (std::mem::size_of::<usize>() * 8 - 1) / 3;
@@ -148,6 +148,44 @@ where
         }
 
         results.into_iter().collect()
+    }
+}
+
+impl<T, Q> SearchMany<Q> for Octree<T>
+where
+    T: Intersects<Aabb> + Intersects<Q> + Sync,
+    Q: Intersects<Aabb> + Sync,
+    Octree<T>: Search<Q>,
+{
+    fn search_many(&self, queries: &Vec<Q>) -> Vec<Vec<usize>> {
+        let n_threads = std::thread::available_parallelism().unwrap().get();
+        let n_queries = queries.len();
+        let n = (n_queries as f64 / n_threads as f64).ceil() as usize;
+
+        crossbeam::scope(|scope| {
+            let mut futures = vec![];
+            let mut results = vec![];
+
+            for i in 0..n_threads {
+                let j = (i * n).min(n_queries);
+                let k = (j + n).min(n_queries);
+
+                futures.push(scope.spawn(move |_| {
+                    queries[j..k]
+                        .iter()
+                        .map(|q| self.search(q))
+                        .collect::<Vec<Vec<usize>>>()
+                }))
+            }
+
+            for future in futures {
+                let mut result = future.join().unwrap();
+                results.append(&mut result);
+            }
+
+            results
+        })
+        .unwrap()
     }
 }
 
@@ -319,5 +357,32 @@ mod test {
         let results = octree.search(&query);
 
         assert_eq!(results.len(), 0);
+    }
+
+    #[test]
+    fn test_search_many() {
+        let aabb = Aabb::unit();
+        let mut octree = Octree::<Vector3>::new(aabb);
+
+        for i in 0..51 {
+            let value = (i as f64) / 100. - 0.25;
+            let point = Vector3::new(value, value, value);
+            octree.insert(point);
+        }
+
+        let center = Vector3::new(0.2, 0.2, 0.2);
+        let halfsize = Vector3::new(0.05, 0.05, 0.05);
+        let query1 = Aabb::new(center, halfsize);
+
+        let center = Vector3::new(0.2, -0.2, 0.2);
+        let halfsize = Vector3::new(0.05, 0.05, 0.05);
+        let query2 = Aabb::new(center, halfsize);
+
+        let queries = vec![query1, query2];
+        let results = octree.search_many(&queries);
+
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].len(), 11);
+        assert_eq!(results[1].len(), 0);
     }
 }
