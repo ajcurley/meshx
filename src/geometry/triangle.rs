@@ -66,6 +66,11 @@ impl Triangle {
         self.intersects(sphere)
     }
 
+    /// Check for a spatial intersection with a Triangle
+    pub fn intersects_triangle(&self, triangle: &Triangle) -> bool {
+        self.intersects(triangle)
+    }
+
     /// (Python) Get a vertex by index
     pub fn __getitem__(&self, index: usize) -> PyResult<Vector3> {
         if index >= 3 {
@@ -126,5 +131,11 @@ impl Intersects<Ray> for Triangle {
 impl Intersects<Sphere> for Triangle {
     fn intersects(&self, sphere: &Sphere) -> bool {
         collision::intersects_sphere_triangle(sphere, self)
+    }
+}
+
+impl Intersects<Triangle> for Triangle {
+    fn intersects(&self, triangle: &Triangle) -> bool {
+        collision::intersects_triangle_triangle(self, triangle)
     }
 }
