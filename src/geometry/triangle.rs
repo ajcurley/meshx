@@ -1,7 +1,11 @@
+use pyo3::exceptions::PyIndexError;
+use pyo3::prelude::*;
+
 use crate::geometry::collision;
 use crate::geometry::{Aabb, Intersects, Ray, Vector3};
 
 /// Triangle in three-dimensional Cartesian space
+#[pyclass]
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Triangle {
     p: Vector3,
@@ -9,8 +13,10 @@ pub struct Triangle {
     r: Vector3,
 }
 
+#[pymethods]
 impl Triangle {
     /// Construct a Triangle from its vertices p, q, and r
+    #[new]
     pub fn new(p: Vector3, q: Vector3, r: Vector3) -> Triangle {
         Triangle { p, q, r }
     }
@@ -43,6 +49,26 @@ impl Triangle {
     /// Compute the unit normal vector
     pub fn unit_normal(&self) -> Vector3 {
         self.normal().unit()
+    }
+
+    /// (Python) Get a vertex by index
+    pub fn __getitem__(&self, index: usize) -> PyResult<Vector3> {
+        if index >= 3 {
+            return Err(PyIndexError::new_err("index out of range"));
+        }
+
+        Ok(self[index])
+    }
+
+    /// (Python) Set a vertex by index
+    pub fn __setitem__(&mut self, index: usize, value: Vector3) -> PyResult<()> {
+        if index >= 3 {
+            return Err(PyIndexError::new_err("index out of range"));
+        }
+
+        self[index] = value;
+
+        Ok(())
     }
 }
 
