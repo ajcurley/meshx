@@ -1,15 +1,20 @@
+use pyo3::prelude::*;
+
 use crate::geometry::collision;
 use crate::geometry::{Aabb, Intersects, Ray, Vector3};
 
 /// Sphere in three-dimensional Cartesian space.
+#[pyclass]
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Sphere {
     center: Vector3,
     radius: f64,
 }
 
+#[pymethods]
 impl Sphere {
     /// Construct a Sphere from its center and radius
+    #[new]
     pub fn new(center: Vector3, radius: f64) -> Sphere {
         Sphere { center, radius }
     }
@@ -28,6 +33,26 @@ impl Sphere {
     /// Get the radius
     pub fn radius(&self) -> f64 {
         self.radius
+    }
+
+    /// Check for a spatial intersection with an Aabb
+    pub fn intersects_aabb(&self, aabb: &Aabb) -> bool {
+        self.intersects(aabb)
+    }
+
+    /// Check for a spatial intersection with a Ray
+    pub fn intersects_ray(&self, ray: &Ray) -> bool {
+        self.intersects(ray)
+    }
+
+    /// Check for a spatial intersection with a Sphere
+    pub fn intersects_sphere(&self, sphere: &Sphere) -> bool {
+        self.intersects(sphere)
+    }
+
+    /// Check for a spatial intersection with a Vector3
+    pub fn intersects_vector3(&self, point: &Vector3) -> bool {
+        self.intersects(point)
     }
 }
 

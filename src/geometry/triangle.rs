@@ -1,7 +1,11 @@
+use pyo3::exceptions::PyIndexError;
+use pyo3::prelude::*;
+
 use crate::geometry::collision;
-use crate::geometry::{Aabb, Intersects, Ray, Vector3};
+use crate::geometry::{Aabb, Intersects, Ray, Sphere, Vector3};
 
 /// Triangle in three-dimensional Cartesian space
+#[pyclass]
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Triangle {
     p: Vector3,
@@ -9,8 +13,10 @@ pub struct Triangle {
     r: Vector3,
 }
 
+#[pymethods]
 impl Triangle {
     /// Construct a Triangle from its vertices p, q, and r
+    #[new]
     pub fn new(p: Vector3, q: Vector3, r: Vector3) -> Triangle {
         Triangle { p, q, r }
     }
@@ -44,6 +50,46 @@ impl Triangle {
     pub fn unit_normal(&self) -> Vector3 {
         self.normal().unit()
     }
+
+    /// Check for a spatial intersection with an Aabb
+    pub fn intersects_aabb(&self, aabb: &Aabb) -> bool {
+        self.intersects(aabb)
+    }
+
+    /// Check for a spatial intersection with a Ray
+    pub fn intersects_ray(&self, ray: &Ray) -> bool {
+        self.intersects(ray)
+    }
+
+    /// Check for a spatial intersection with a Sphere
+    pub fn intersects_sphere(&self, sphere: &Sphere) -> bool {
+        self.intersects(sphere)
+    }
+
+    /// Check for a spatial intersection with a Triangle
+    pub fn intersects_triangle(&self, triangle: &Triangle) -> bool {
+        self.intersects(triangle)
+    }
+
+    /// (Python) Get a vertex by index
+    pub fn __getitem__(&self, index: usize) -> PyResult<Vector3> {
+        if index >= 3 {
+            return Err(PyIndexError::new_err("index out of range"));
+        }
+
+        Ok(self[index])
+    }
+
+    /// (Python) Set a vertex by index
+    pub fn __setitem__(&mut self, index: usize, value: Vector3) -> PyResult<()> {
+        if index >= 3 {
+            return Err(PyIndexError::new_err("index out of range"));
+        }
+
+        self[index] = value;
+
+        Ok(())
+    }
 }
 
 impl std::ops::Index<usize> for Triangle {
@@ -70,8 +116,26 @@ impl std::ops::IndexMut<usize> for Triangle {
     }
 }
 
+impl Intersects<Aabb> for Triangle {
+    fn intersects(&self, aabb: &Aabb) -> bool {
+        collision::intersects_aabb_triangle(aabb, self)
+    }
+}
+
 impl Intersects<Ray> for Triangle {
     fn intersects(&self, ray: &Ray) -> bool {
         collision::intersects_ray_triangle(ray, self)
+    }
+}
+
+impl Intersects<Sphere> for Triangle {
+    fn intersects(&self, sphere: &Sphere) -> bool {
+        collision::intersects_sphere_triangle(sphere, self)
+    }
+}
+
+impl Intersects<Triangle> for Triangle {
+    fn intersects(&self, triangle: &Triangle) -> bool {
+        collision::intersects_triangle_triangle(self, triangle)
     }
 }
