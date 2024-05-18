@@ -1,15 +1,20 @@
+use pyo3::prelude::*;
+
 use crate::geometry::collision;
 use crate::geometry::{Aabb, Intersects, Ray, Vector3};
 
 /// Sphere in three-dimensional Cartesian space.
+#[pyclass]
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Sphere {
     center: Vector3,
     radius: f64,
 }
 
+#[pymethods]
 impl Sphere {
     /// Construct a Sphere from its center and radius
+    #[new]
     pub fn new(center: Vector3, radius: f64) -> Sphere {
         Sphere { center, radius }
     }

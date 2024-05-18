@@ -1,20 +1,26 @@
+use pyo3::prelude::*;
+
 use crate::geometry::collision;
 use crate::geometry::{Intersects, Ray, Sphere, Vector3};
 
 /// Axis-aligned bounding box in three-dimensional Cartesian space.
+#[pyclass]
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Aabb {
     center: Vector3,
     halfsize: Vector3,
 }
 
+#[pymethods]
 impl Aabb {
     /// Construct an Aabb from its center and halfsize
+    #[new]
     pub fn new(center: Vector3, halfsize: Vector3) -> Aabb {
         Aabb { center, halfsize }
     }
 
     /// Construct an Aabb from its min and max bounds
+    #[staticmethod]
     pub fn from_bounds(min: Vector3, max: Vector3) -> Aabb {
         let center = (max + min) * 0.5;
         let halfsize = (max - min) * 0.5;
@@ -22,6 +28,7 @@ impl Aabb {
     }
 
     /// Construct a unit Aabb
+    #[staticmethod]
     pub fn unit() -> Aabb {
         let center = Vector3::zeros();
         let halfsize = Vector3::new(0.5, 0.5, 0.5);
