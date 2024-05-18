@@ -1,15 +1,20 @@
+use pyo3::prelude::*;
+
 use crate::geometry::collision;
 use crate::geometry::{Aabb, Intersects, Sphere, Triangle, Vector3};
 
 /// One-sided infinite ray in three-dimensional Cartesian space.
+#[pyclass]
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Ray {
     origin: Vector3,
     direction: Vector3,
 }
 
+#[pymethods]
 impl Ray {
     /// Construct a Ray from its origin and direction
+    #[new]
     pub fn new(origin: Vector3, direction: Vector3) -> Ray {
         Ray { origin, direction }
     }
