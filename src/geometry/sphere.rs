@@ -34,6 +34,26 @@ impl Sphere {
     pub fn radius(&self) -> f64 {
         self.radius
     }
+
+    /// Check for a spatial intersection with an Aabb
+    pub fn intersects_aabb(&self, aabb: &Aabb) -> bool {
+        self.intersects(aabb)
+    }
+
+    /// Check for a spatial intersection with a Ray
+    pub fn intersects_ray(&self, ray: &Ray) -> bool {
+        self.intersects(ray)
+    }
+
+    /// Check for a spatial intersection with a Sphere
+    pub fn intersects_sphere(&self, sphere: &Sphere) -> bool {
+        self.intersects(sphere)
+    }
+
+    /// Check for a spatial intersection with a Vector3
+    pub fn intersects_vector3(&self, point: &Vector3) -> bool {
+        self.intersects(point)
+    }
 }
 
 impl Intersects<Aabb> for Sphere {
