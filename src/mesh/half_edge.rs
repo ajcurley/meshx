@@ -350,8 +350,8 @@ impl HeMesh {
     }
 
     /// Compute the feature edges using a threshold angle in radians. This will
-    /// return strictly one half edge of the half edge pairs defining an edge.
-    pub fn feature_edges(&self, angle: f64) -> Vec<usize> {
+    /// return the pair of half edges defining the edge.
+    pub fn feature_edges(&self, angle: f64) -> Vec<(usize, usize)> {
         let mut visited = vec![false; self.n_half_edges()];
         let mut features = vec![];
 
@@ -359,15 +359,15 @@ impl HeMesh {
             if !visited[i] {
                 visited[i] = true;
 
-                if let Some(twin) = half_edge.twin {
-                    visited[twin] = true;
+                if let Some(j) = half_edge.twin {
+                    visited[j] = true;
 
-                    let twin = self.half_edges[twin];
+                    let twin = self.half_edges[j];
                     let u = self.face_normal(half_edge.face);
                     let v = self.face_normal(twin.face);
 
                     if Vector3::angle(&u, &v) >= angle {
-                        features.push(i);
+                        features.push((i, j));
                     }
                 }
             }
