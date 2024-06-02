@@ -1,5 +1,8 @@
+use pyo3::prelude::*;
+
 use crate::geometry::Vector3;
 
+#[pyclass]
 #[derive(Debug, Copy, Clone, Default)]
 pub struct Vertex {
     x: f64,
@@ -7,8 +10,10 @@ pub struct Vertex {
     z: f64,
 }
 
+#[pymethods]
 impl Vertex {
     /// Construct a Vertex from its components
+    #[new]
     pub fn new(x: f64, y: f64, z: f64) -> Vertex {
         Vertex { x, y, z }
     }
@@ -50,21 +55,24 @@ impl Into<Vector3> for Vertex {
     }
 }
 
+#[pyclass]
 #[derive(Debug, Clone, Default)]
 pub struct Face {
     vertices: Vec<usize>,
     patch: Option<usize>,
 }
 
+#[pymethods]
 impl Face {
     /// Construct a Face from its vertices and patch
+    #[new]
     pub fn new(vertices: Vec<usize>, patch: Option<usize>) -> Face {
         Face { vertices, patch }
     }
 
     /// Get a borrowed reference to the vertices
-    pub fn vertices(&self) -> &Vec<usize> {
-        &self.vertices
+    pub fn vertices(&self) -> Vec<usize> {
+        self.vertices.clone()
     }
 
     /// Get the patch
@@ -101,6 +109,7 @@ impl std::ops::IndexMut<usize> for Face {
     }
 }
 
+#[pyclass]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Edge {
     p: usize,
@@ -108,8 +117,10 @@ pub struct Edge {
     patch: Option<usize>,
 }
 
+#[pymethods]
 impl Edge {
     /// Construct an Edge from its vertices and patch
+    #[new]
     pub fn new(p: usize, q: usize, patch: Option<usize>) -> Edge {
         Edge { p, q, patch }
     }
@@ -126,11 +137,6 @@ impl Edge {
             q: self.p.max(self.q),
             patch: self.patch,
         }
-    }
-
-    /// Compute the tuple representation
-    pub fn to_tuple(&self) -> (usize, usize) {
-        (self.p, self.q)
     }
 }
 
@@ -163,13 +169,16 @@ impl std::hash::Hash for Edge {
     }
 }
 
+#[pyclass]
 #[derive(Debug, Clone)]
 pub struct Patch {
     name: String,
 }
 
+#[pymethods]
 impl Patch {
     /// Construct a Patch from its name
+    #[new]
     pub fn new(name: String) -> Patch {
         Patch { name }
     }
