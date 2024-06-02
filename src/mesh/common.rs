@@ -34,6 +34,17 @@ impl Vertex {
         self.z
     }
 
+    /// Convert to a Vector3
+    pub fn to_vector3(&self) -> Vector3 {
+        (*self).into()
+    }
+
+    /// Convert from a Vector3
+    #[staticmethod]
+    pub fn from_vector3(value: Vector3) -> Vertex {
+        Vertex::from(value)
+    }
+
     /// (Python) Get the component by index
     pub fn __getitem__(&self, index: usize) -> PyResult<f64> {
         if index > 2 {
