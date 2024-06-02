@@ -6,8 +6,11 @@ use crate::geometry::Vector3;
 #[pyclass]
 #[derive(Debug, Copy, Clone, Default)]
 pub struct Vertex {
+    #[pyo3(get, set)]
     x: f64,
+    #[pyo3(get, set)]
     y: f64,
+    #[pyo3(get, set)]
     z: f64,
 }
 
@@ -17,21 +20,6 @@ impl Vertex {
     #[new]
     pub fn new(x: f64, y: f64, z: f64) -> Vertex {
         Vertex { x, y, z }
-    }
-
-    /// Get the x-component
-    pub fn x(&self) -> f64 {
-        self.x
-    }
-
-    /// Get the y-component
-    pub fn y(&self) -> f64 {
-        self.y
-    }
-
-    /// Get the z-component
-    pub fn z(&self) -> f64 {
-        self.z
     }
 
     /// Convert to a Vector3
@@ -61,7 +49,6 @@ impl Vertex {
         }
 
         self[index] = value;
-
         Ok(())
     }
 }
@@ -117,14 +104,21 @@ impl Face {
         Face { vertices, patch }
     }
 
-    /// Get a borrowed reference to the vertices
+    /// Get the vertices
     pub fn vertices(&self) -> Vec<usize> {
         self.vertices.clone()
     }
 
     /// Get the patch
+    #[getter]
     pub fn patch(&self) -> Option<usize> {
         self.patch
+    }
+
+    /// Set the patch
+    #[setter]
+    pub fn set_patch(&mut self, patch: Option<usize>) {
+        self.patch = patch;
     }
 
     /// Compute the edges from adjacent vertices
@@ -139,6 +133,25 @@ impl Face {
         }
 
         edges
+    }
+
+    /// (Python) Get a vertex index by index
+    pub fn __getitem__(&self, index: usize) -> PyResult<usize> {
+        if index >= self.vertices.len() {
+            return Err(PyIndexError::new_err("index out of range"));
+        }
+
+        Ok(self.vertices[index])
+    }
+
+    /// (Python) Set a vertex index by index
+    pub fn __setitem__(&mut self, index: usize, value: usize) -> PyResult<()> {
+        if index >= self.vertices.len() {
+            return Err(PyIndexError::new_err("index out of range"));
+        }
+
+        self.vertices[index] = value;
+        Ok(())
     }
 }
 
@@ -159,7 +172,9 @@ impl std::ops::IndexMut<usize> for Face {
 #[pyclass]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Edge {
+    #[pyo3(get, set)]
     p: usize,
+    #[pyo3(get, set)]
     q: usize,
     patch: Option<usize>,
 }
@@ -173,8 +188,15 @@ impl Edge {
     }
 
     /// Get the patch
+    #[getter]
     pub fn patch(&self) -> Option<usize> {
         self.patch
+    }
+
+    /// Set the patch
+    #[setter]
+    pub fn set_patch(&mut self, patch: Option<usize>) {
+        self.patch = patch;
     }
 
     /// Get the sorted representation
@@ -184,6 +206,25 @@ impl Edge {
             q: self.p.max(self.q),
             patch: self.patch,
         }
+    }
+
+    /// (Python) Get the vertex index by index
+    pub fn __getitem__(&self, index: usize) -> PyResult<usize> {
+        if index > 1 {
+            return Err(PyIndexError::new_err("index out of range"));
+        }
+
+        Ok(self[index])
+    }
+
+    /// (Python) Set the vertex index by index
+    pub fn __setitem__(&mut self, index: usize, value: usize) -> PyResult<()> {
+        if index > 1 {
+            return Err(PyIndexError::new_err("index out of range"));
+        }
+
+        self[index] = value;
+        Ok(())
     }
 }
 
@@ -231,7 +272,14 @@ impl Patch {
     }
 
     /// Get a borrowed reference to the name
+    #[getter]
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    /// Set the name
+    #[setter]
+    pub fn set_name(&mut self, name: &str) {
+        self.name = name.to_string();
     }
 }
