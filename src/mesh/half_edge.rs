@@ -422,7 +422,7 @@ impl HeMesh {
     }
 
     /// Combine patches with the same name explicitly.
-    pub fn combine_patches(&mut self) {
+    pub fn remove_duplicate_patches(&mut self) {
         let mut patches = vec![];
         let mut index: HashMap<&str, usize> = HashMap::new();
 
@@ -943,7 +943,7 @@ mod test {
     }
 
     #[test]
-    fn test_combine_patches() {
+    fn test_remove_duplicate_patches() {
         let path = "tests/fixtures/box_groups.obj";
         let mut mesh1 = HeMesh::from_obj(&path).unwrap();
         let mesh2 = HeMesh::from_obj(&path).unwrap();
@@ -955,7 +955,7 @@ mod test {
         assert_eq!(mesh1.n_half_edges(), 72);
         assert_eq!(mesh1.n_patches(), 12);
 
-        mesh1.combine_patches();
+        mesh1.remove_duplicate_patches();
 
         assert_eq!(mesh1.n_patches(), 6);
     }
