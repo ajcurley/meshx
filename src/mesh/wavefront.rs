@@ -281,7 +281,7 @@ impl ObjWriter {
 
     /// Format a edge to an entry
     fn format_edge(&self, edge: &Edge) -> String {
-        format!("l {} {}\n", edge[0], edge[1])
+        format!("l {} {}\n", edge[0] + 1, edge[1] + 1)
     }
 
     /// Format a patch to an entry
