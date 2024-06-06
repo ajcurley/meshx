@@ -170,7 +170,7 @@ impl std::ops::IndexMut<usize> for Face {
 }
 
 #[pyclass]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone)]
 pub struct Edge {
     #[pyo3(get, set)]
     p: usize,
@@ -249,6 +249,14 @@ impl std::ops::IndexMut<usize> for Edge {
         }
     }
 }
+
+impl std::cmp::PartialEq for Edge {
+    fn eq(&self, other: &Edge) -> bool {
+        self.p == other.p && self.q == other.q
+    }
+}
+
+impl std::cmp::Eq for Edge {}
 
 impl std::hash::Hash for Edge {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
