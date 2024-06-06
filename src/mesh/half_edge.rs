@@ -979,7 +979,7 @@ mod test {
         let path = "tests/fixtures/box_groups.obj";
         let mesh1 = HeMesh::from_obj(&path).unwrap();
 
-        let patches: Vec<&str> = vec!["front", "right"];
+        let patches: Vec<String> = vec!["front".to_string(), "right".to_string()];
         let mesh2 = mesh1.extract_patches(&patches);
 
         assert_eq!(mesh2.n_vertices(), 6);
