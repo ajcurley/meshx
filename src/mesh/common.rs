@@ -6,11 +6,8 @@ use crate::geometry::Vector3;
 #[pyclass]
 #[derive(Debug, Copy, Clone, Default)]
 pub struct Vertex {
-    #[pyo3(get, set)]
     x: f64,
-    #[pyo3(get, set)]
     y: f64,
-    #[pyo3(get, set)]
     z: f64,
 }
 
@@ -20,6 +17,39 @@ impl Vertex {
     #[new]
     pub fn new(x: f64, y: f64, z: f64) -> Vertex {
         Vertex { x, y, z }
+    }
+
+    /// Get the x-component
+    #[getter]
+    pub fn x(&self) -> f64 {
+        self.x
+    }
+
+    /// Set the x-component
+    pub fn set_x(&mut self, value: f64) {
+        self.x = value;
+    }
+
+    /// Get the y-component
+    #[getter]
+    pub fn y(&self) -> f64 {
+        self.y
+    }
+
+    /// Set the y-component
+    pub fn set_y(&mut self, value: f64) {
+        self.y = value;
+    }
+
+    /// Get the z-component
+    #[getter]
+    pub fn z(&self) -> f64 {
+        self.z
+    }
+
+    /// Set the z-component
+    pub fn set_z(&mut self, value: f64) {
+        self.z = value;
     }
 
     /// Convert to a Vector3
@@ -105,8 +135,15 @@ impl Face {
     }
 
     /// Get the vertices
+    #[getter]
     pub fn vertices(&self) -> Vec<usize> {
         self.vertices.clone()
+    }
+
+    /// Set the vertices
+    #[setter]
+    pub fn set_vertices(&mut self, vertices: Vec<usize>) {
+        self.vertices = vertices;
     }
 
     /// Get the patch
@@ -172,9 +209,7 @@ impl std::ops::IndexMut<usize> for Face {
 #[pyclass]
 #[derive(Debug, Copy, Clone)]
 pub struct Edge {
-    #[pyo3(get, set)]
     p: usize,
-    #[pyo3(get, set)]
     q: usize,
     patch: Option<usize>,
 }
@@ -185,6 +220,29 @@ impl Edge {
     #[new]
     pub fn new(p: usize, q: usize, patch: Option<usize>) -> Edge {
         Edge { p, q, patch }
+    }
+
+    /// Get the p-component
+    #[getter]
+    pub fn p(&self) -> usize {
+        self.p
+    }
+
+    /// Set the p-component
+    #[setter]
+    pub fn set_p(&mut self, value: usize) {
+        self.p = value;
+    }
+
+    /// Get the q-component
+    #[getter]
+    pub fn q(&self) -> usize {
+        self.q
+    }
+
+    /// Set the q-component
+    pub fn set_q(&mut self, value: usize) {
+        self.q = value;
     }
 
     /// Get the patch
