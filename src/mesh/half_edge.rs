@@ -493,13 +493,13 @@ impl HeMesh {
 
     /// Extract a subset from the mesh by the patch names. This copies the
     /// target subset into a new mesh.
-    pub fn extract_patches(&self, patches: &Vec<&str>) -> HeMesh {
+    pub fn extract_patches(&self, patches: &Vec<String>) -> HeMesh {
         let mut selected = HashSet::new();
         let mut index = vec![false; self.n_patches()];
         let mut faces = vec![];
 
         for patch in patches.iter() {
-            selected.insert(patch.to_string());
+            selected.insert(patch.clone());
         }
 
         for (i, patch) in self.patches.iter().enumerate() {
