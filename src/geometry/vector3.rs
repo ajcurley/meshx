@@ -89,6 +89,49 @@ impl Vector3 {
         }
     }
 
+    /// Compute the absolute value vector
+    pub fn abs(&self) -> Vector3 {
+        Vector3 {
+            x: self.x.abs(),
+            y: self.y.abs(),
+            z: self.z.abs(),
+        }
+    }
+
+    /// Compute the index of the minimal component
+    pub fn argmin(&self) -> usize {
+        let mut index = 0;
+        let mut value = self.x;
+
+        if self.y < value {
+            value = self.y;
+            index = 1;
+        }
+
+        if self.z < value {
+            index = 2;
+        }
+
+        index
+    }
+
+    /// Compute the index of the maximal component
+    pub fn argmax(&self) -> usize {
+        let mut index = 0;
+        let mut value = self.x;
+
+        if self.y > value {
+            value = self.y;
+            index = 1;
+        }
+
+        if self.z > value {
+            index = 2;
+        }
+
+        index
+    }
+
     /// Check for a spatial intersection with an Aabb
     pub fn intersects_aabb(&self, aabb: &Aabb) -> bool {
         self.intersects(aabb)
