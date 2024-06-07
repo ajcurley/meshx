@@ -154,3 +154,9 @@ impl Intersects<Triangle> for Triangle {
         collision::intersects_triangle_triangle(self, triangle)
     }
 }
+
+impl Intersects<Vector3> for Triangle {
+    fn intersects(&self, v: &Vector3) -> bool {
+        collision::intersects_triangle_vector3(self, v)
+    }
+}
