@@ -14,6 +14,32 @@ pub fn intersects_aabb_triangle(aabb: &Aabb, triangle: &Triangle) -> bool {
     let e1 = v2 - v1;
     let e2 = v0 - v2;
 
+    // Bullet #1 - Test the AABB against the minimum AABB of the triangle
+    let (min, max) = findminmax(v0.x(), v1.x(), v2.x());
+
+    if min > halfsize.x() || max < -halfsize.x() {
+        return false;
+    }
+
+    let (min, max) = findminmax(v0.y(), v1.y(), v2.y());
+
+    if min > halfsize.y() || max < -halfsize.y() {
+        return false;
+    }
+
+    let (min, max) = findminmax(v0.z(), v1.z(), v2.z());
+
+    if min > halfsize.z() || max < -halfsize.z() {
+        return false;
+    }
+
+    // Bullet #2 - Test the triangle plane against the AABB
+    let normal = Vector3::cross(&e0, &e1);
+
+    if !plane_box_overlap(normal, v0, halfsize) {
+        return false;
+    }
+
     // Bullet #3 - 9 tests
     let fex = e0.x().abs();
     let fey = e0.y().abs();
@@ -63,31 +89,10 @@ pub fn intersects_aabb_triangle(aabb: &Aabb, triangle: &Triangle) -> bool {
         return false;
     }
 
-    // Bullet #1 - Test the AABB against the minimum AABB of the triangle
-    let (min, max) = findminmax(v0.x(), v1.x(), v2.x());
-
-    if min > halfsize.x() || max < -halfsize.x() {
-        return false;
-    }
-
-    let (min, max) = findminmax(v0.y(), v1.y(), v2.y());
-
-    if min > halfsize.y() || max < -halfsize.y() {
-        return false;
-    }
-
-    let (min, max) = findminmax(v0.z(), v1.z(), v2.z());
-
-    if min > halfsize.z() || max < -halfsize.z() {
-        return false;
-    }
-
-    // Bullet #2 - Test the triangle plane against the AABB
-    let normal = Vector3::cross(&e0, &e1);
-
-    plane_box_overlap(normal, v0, halfsize)
+    true
 }
 
+#[inline(always)]
 fn axistest_x01(a: f64, b: f64, fa: f64, fb: f64, v0: Vector3, v2: Vector3, h: Vector3) -> bool {
     let p0 = a * v0.y() - b * v0.z();
     let p2 = a * v2.y() - b * v2.z();
@@ -96,6 +101,7 @@ fn axistest_x01(a: f64, b: f64, fa: f64, fb: f64, v0: Vector3, v2: Vector3, h: V
     !(min > rad || max < -rad)
 }
 
+#[inline(always)]
 fn axistest_x2(a: f64, b: f64, fa: f64, fb: f64, v0: Vector3, v1: Vector3, h: Vector3) -> bool {
     let p0 = a * v0.y() - b * v0.z();
     let p1 = a * v1.y() - b * v1.z();
@@ -104,6 +110,7 @@ fn axistest_x2(a: f64, b: f64, fa: f64, fb: f64, v0: Vector3, v1: Vector3, h: Ve
     !(min > rad || max < -rad)
 }
 
+#[inline(always)]
 fn axistest_y02(a: f64, b: f64, fa: f64, fb: f64, v0: Vector3, v2: Vector3, h: Vector3) -> bool {
     let p0 = -a * v0.x() + b * v0.z();
     let p2 = -a * v2.x() + b * v2.z();
@@ -112,6 +119,7 @@ fn axistest_y02(a: f64, b: f64, fa: f64, fb: f64, v0: Vector3, v2: Vector3, h: V
     !(min > rad || max < -rad)
 }
 
+#[inline(always)]
 fn axistest_y1(a: f64, b: f64, fa: f64, fb: f64, v0: Vector3, v1: Vector3, h: Vector3) -> bool {
     let p0 = -a * v0.x() + b * v0.z();
     let p1 = -a * v1.x() + b * v1.z();
@@ -120,6 +128,7 @@ fn axistest_y1(a: f64, b: f64, fa: f64, fb: f64, v0: Vector3, v1: Vector3, h: Ve
     !(min > rad || max < -rad)
 }
 
+#[inline(always)]
 fn axistest_z12(a: f64, b: f64, fa: f64, fb: f64, v1: Vector3, v2: Vector3, h: Vector3) -> bool {
     let p1 = a * v1.x() - b * v1.y();
     let p2 = a * v2.x() - b * v2.y();
@@ -128,6 +137,7 @@ fn axistest_z12(a: f64, b: f64, fa: f64, fb: f64, v1: Vector3, v2: Vector3, h: V
     !(min > rad || max < -rad)
 }
 
+#[inline(always)]
 fn axistest_z0(a: f64, b: f64, fa: f64, fb: f64, v0: Vector3, v1: Vector3, h: Vector3) -> bool {
     let p0 = a * v0.x() - b * v0.y();
     let p1 = a * v1.x() - b * v1.y();
@@ -136,29 +146,14 @@ fn axistest_z0(a: f64, b: f64, fa: f64, fb: f64, v0: Vector3, v1: Vector3, h: Ve
     !(min > rad || max < -rad)
 }
 
+#[inline(always)]
 fn findminmax(x0: f64, x1: f64, x2: f64) -> (f64, f64) {
-    let mut min = x0;
-    let mut max = x0;
-
-    if x1 < min {
-        min = x1
-    }
-
-    if x1 > max {
-        max = x1
-    }
-
-    if x2 < min {
-        min = x2
-    }
-
-    if x2 > max {
-        max = x2
-    }
-
+    let min = x0.min(x1).min(x2);
+    let max = x0.max(x1).max(x2);
     (min, max)
 }
 
+#[inline(always)]
 fn plane_box_overlap(normal: Vector3, vert: Vector3, maxbox: Vector3) -> bool {
     let mut vmin = Vector3::zeros();
     let mut vmax = Vector3::zeros();
