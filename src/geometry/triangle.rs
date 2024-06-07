@@ -21,6 +21,21 @@ impl Triangle {
         Triangle { p, q, r }
     }
 
+    /// Get the p-vertex
+    pub fn p(&self) -> Vector3 {
+        self.p
+    }
+
+    /// Get the q-vertex
+    pub fn q(&self) -> Vector3 {
+        self.q
+    }
+
+    /// Get the r-vertex
+    pub fn r(&self) -> Vector3 {
+        self.r
+    }
+
     /// Compute the axis-aligned bounding box
     pub fn aabb(&self) -> Aabb {
         let mut min = Vector3::zeros();
