@@ -301,3 +301,127 @@ fn point_in_tri(v0: Vector3, u0: Vector3, u1: Vector3, u2: Vector3, i0: usize, i
 
     d0 * d1 > 0. && d0 * d2 > 0.
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_triangle_triangle_ok_overlap() {
+        let a = Vector3::new(0., 0., 0.);
+        let b = Vector3::new(2., 0., 0.);
+        let c = Vector3::new(2., 2., 0.);
+        let t1 = Triangle::new(a, b, c);
+
+        let d = Vector3::new(1., 0.1, -0.5);
+        let e = Vector3::new(1., 0.1, 1.);
+        let f = Vector3::new(1., 0.3, 1.);
+        let t2 = Triangle::new(d, e, f);
+
+        let intersects = intersects_triangle_triangle(&t1, &t2);
+
+        assert!(intersects);
+    }
+
+    #[test]
+    fn test_triangle_triangle_ok_overlap_partial() {
+        let a = Vector3::new(0., 0., 0.);
+        let b = Vector3::new(2., 0., 0.);
+        let c = Vector3::new(2., 2., 0.);
+        let t1 = Triangle::new(a, b, c);
+
+        let d = Vector3::new(1., 0.1, -0.5);
+        let e = Vector3::new(1., 0.1, 1.);
+        let f = Vector3::new(1., 1.5, 1.);
+        let t2 = Triangle::new(d, e, f);
+
+        let intersects = intersects_triangle_triangle(&t1, &t2);
+
+        assert!(intersects);
+    }
+
+    #[test]
+    fn test_triangle_triangle_ok_coplanar_overlap() {
+        let a = Vector3::new(0., 0., 0.);
+        let b = Vector3::new(2., 0., 0.);
+        let c = Vector3::new(2., 2., 0.);
+        let t1 = Triangle::new(a, b, c);
+
+        let d = Vector3::new(1., 0., 0.);
+        let e = Vector3::new(3., 0., 0.);
+        let f = Vector3::new(3., 2., 0.);
+        let t2 = Triangle::new(d, e, f);
+
+        let intersects = intersects_triangle_triangle(&t1, &t2);
+
+        assert!(intersects);
+    }
+
+    #[test]
+    fn test_triangle_triangle_ok_coplanar_contained() {
+        let a = Vector3::new(0., 0., 0.);
+        let b = Vector3::new(4., 0., 0.);
+        let c = Vector3::new(4., 4., 0.);
+        let t1 = Triangle::new(a, b, c);
+
+        let d = Vector3::new(1., 0., 0.);
+        let e = Vector3::new(3., 0., 0.);
+        let f = Vector3::new(3., 2., 0.);
+        let t2 = Triangle::new(d, e, f);
+
+        let intersects = intersects_triangle_triangle(&t1, &t2);
+
+        assert!(intersects);
+    }
+
+    #[test]
+    fn test_triangle_triangle_fail_one_side() {
+        let a = Vector3::new(0., 0., 0.);
+        let b = Vector3::new(1., 0., 0.);
+        let c = Vector3::new(1., 1., 0.);
+        let t1 = Triangle::new(a, b, c);
+
+        let d = Vector3::new(0., 0., 1.);
+        let e = Vector3::new(0., 0., 2.);
+        let f = Vector3::new(0., 1., 2.);
+        let t2 = Triangle::new(d, e, f);
+
+        let intersects = intersects_triangle_triangle(&t1, &t2);
+
+        assert!(!intersects);
+    }
+
+    #[test]
+    fn test_triangle_triangle_fail_beside() {
+        let a = Vector3::new(0., 0., 1.);
+        let b = Vector3::new(1., 0., 1.);
+        let c = Vector3::new(1., 1., 1.);
+        let t1 = Triangle::new(a, b, c);
+
+        let d = Vector3::new(0., 2., 0.);
+        let e = Vector3::new(0., 2., 2.);
+        let f = Vector3::new(0., 2., 2.);
+        let t2 = Triangle::new(d, e, f);
+
+        let intersects = intersects_triangle_triangle(&t1, &t2);
+
+        assert!(!intersects);
+    }
+
+    #[test]
+    fn test_triangle_triangle_fail_coplanar() {
+        let a = Vector3::new(0., 0., 0.);
+        let b = Vector3::new(1., 0., 0.);
+        let c = Vector3::new(1., 1., 0.);
+        let t1 = Triangle::new(a, b, c);
+
+        let d = Vector3::new(5., 0., 0.);
+        let e = Vector3::new(6., 0., 0.);
+        let f = Vector3::new(6., 6., 0.);
+        let t2 = Triangle::new(d, e, f);
+
+        let intersects = intersects_triangle_triangle(&t1, &t2);
+
+        assert!(!intersects);
+    }
+}
