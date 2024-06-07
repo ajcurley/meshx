@@ -2,7 +2,7 @@ use pyo3::exceptions::PyIndexError;
 use pyo3::prelude::*;
 
 use crate::geometry::collision;
-use crate::geometry::{Aabb, Intersects, Sphere};
+use crate::geometry::{Aabb, Intersects, Sphere, Triangle};
 
 /// Vector3 in three-dimensional Cartesian space.
 #[pyclass]
@@ -466,5 +466,11 @@ impl Intersects<Aabb> for Vector3 {
 impl Intersects<Sphere> for Vector3 {
     fn intersects(&self, sphere: &Sphere) -> bool {
         collision::intersects_sphere_vector3(sphere, self)
+    }
+}
+
+impl Intersects<Triangle> for Vector3 {
+    fn intersects(&self, triangle: &Triangle) -> bool {
+        collision::intersects_triangle_vector3(triangle, self)
     }
 }
