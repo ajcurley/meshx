@@ -1,3 +1,4 @@
+pub mod cartesian;
 pub mod common;
 pub mod half_edge;
 pub mod utils;

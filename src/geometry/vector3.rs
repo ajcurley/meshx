@@ -98,6 +98,16 @@ impl Vector3 {
         }
     }
 
+    /// Compute the minimal component
+    pub fn min(&self) -> f64 {
+        self.x.min(self.y).min(self.z)
+    }
+
+    /// Compute the maximal component
+    pub fn max(&self) -> f64 {
+        self.x.max(self.y).max(self.z)
+    }
+
     /// Compute the index of the minimal component
     pub fn argmin(&self) -> usize {
         let mut index = 0;

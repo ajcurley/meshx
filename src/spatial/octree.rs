@@ -54,6 +54,19 @@ where
         self.nodes.get_mut(&code).expect("octree node not found")
     }
 
+    /// Get the leaf node locational codes
+    pub fn leaves(&self) -> Vec<usize> {
+        let mut codes = vec![];
+
+        for (code, node) in self.nodes.iter() {
+            if node.is_leaf() {
+                codes.push(*code);
+            }
+        }
+
+        codes
+    }
+
     /// Insert an item into the Octree. The item may be indexed on one or
     /// more nodes. Items must be strictly inside the Octree bounds.
     pub fn insert(&mut self, item: T) {
@@ -118,6 +131,15 @@ where
         }
 
         children
+    }
+}
+
+impl<T> Default for Octree<T>
+where
+    T: Intersects<Aabb>,
+{
+    fn default() -> Octree<T> {
+        Octree::new(Aabb::unit())
     }
 }
 
