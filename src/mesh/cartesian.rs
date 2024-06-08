@@ -1,5 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
+use vtkio::model::*;
+
 use crate::geometry::{Aabb, Triangle, Vector3};
 use crate::mesh::half_edge::HeMesh;
 use crate::spatial::{Octree, SearchMany};
@@ -30,6 +32,7 @@ impl CartesianMesh {
         self.index_geometry();
         self.generate_blocks();
         self.refine_blocks();
+        self.write_blocks();
     }
 
     /// Index the geometry in an Octree for fast querying.
@@ -128,6 +131,11 @@ impl CartesianMesh {
         }
 
         println!("Total cells: {}", self.blocks.leaves().len());
+    }
+
+    fn write_blocks(&self) {
+        let mut points: Vec<f64> = vec![];
+
     }
 }
 
