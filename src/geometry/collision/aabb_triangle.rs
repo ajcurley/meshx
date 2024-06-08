@@ -197,6 +197,45 @@ mod test {
     }
 
     #[test]
+    fn test_aabb_triangle_ok_cross_face() {
+        let aabb = get_aabb();
+        let p = Vector3::new(0.5, 0.5, 0.5);
+        let q = Vector3::new(1.25, 0.75, 0.5);
+        let r = Vector3::new(1.25, 0.25, 0.5);
+        let triangle = Triangle::new(p, q, r);
+
+        let intersects = intersects_aabb_triangle(&aabb, &triangle);
+
+        assert!(intersects);
+    }
+
+    #[test]
+    fn test_aabb_triangle_ok_cross_edge() {
+        let aabb = get_aabb();
+        let p = Vector3::new(0.25, -0.25, 0.5);
+        let q = Vector3::new(1.25, 0.75, 0.5);
+        let r = Vector3::new(1.25, -0.25, 0.5);
+        let triangle = Triangle::new(p, q, r);
+
+        let intersects = intersects_aabb_triangle(&aabb, &triangle);
+
+        assert!(intersects);
+    }
+
+    #[test]
+    fn test_aabb_triangle_ok_cross_full() {
+        let aabb = get_aabb();
+        let p = Vector3::new(-2., -1., 0.5);
+        let q = Vector3::new(1.5, 3., 0.5);
+        let r = Vector3::new(1.5, -1., 0.5);
+        let triangle = Triangle::new(p, q, r);
+
+        let intersects = intersects_aabb_triangle(&aabb, &triangle);
+
+        assert!(intersects);
+    }
+
+    #[test]
     fn test_aabb_triangle_fail_aabb() {
         let aabb = get_aabb();
         let p = Vector3::new(0., 0., 2.);
