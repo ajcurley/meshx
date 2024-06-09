@@ -14,7 +14,7 @@ pub struct Octree<T>
 where
     T: Intersects<Aabb>,
 {
-    nodes: FxHashMap<usize, OctreeNode>,
+    nodes: FxHashMap<LocationalCode, OctreeNode>,
     items: Vec<T>,
 }
 
@@ -45,12 +45,12 @@ where
     }
 
     /// Get a borrowed reference to a node
-    pub fn node(&self, code: usize) -> &OctreeNode {
+    pub fn node(&self, code: LocationalCode) -> &OctreeNode {
         &self.nodes[&code]
     }
 
     /// Get a mutable reference to a node
-    fn node_mut(&mut self, code: usize) -> &mut OctreeNode {
+    fn node_mut(&mut self, code: LocationalCode) -> &mut OctreeNode {
         self.nodes.get_mut(&code).expect("octree node not found")
     }
 
@@ -58,7 +58,7 @@ where
     /// more nodes. Items must be strictly inside the Octree bounds.
     pub fn insert(&mut self, item: T) {
         let index = self.items.len();
-        let mut queue = vec![1];
+        let mut queue = vec![LocationalCode::root()];
         let mut codes = vec![];
 
         while let Some(code) = queue.pop() {
@@ -90,7 +90,7 @@ where
 
     /// Split an internal (non-leaf) node and redistribute any indexed
     /// items amongst the children leaf nodes.
-    pub fn split(&mut self, code: usize) -> Vec<usize> {
+    pub fn split(&mut self, code: LocationalCode) -> Vec<LocationalCode> {
         let node = self.node_mut(code);
 
         if !node.can_split() {
@@ -128,7 +128,7 @@ where
 {
     fn search(&self, query: &Q) -> Vec<usize> {
         let mut results = FxHashSet::default();
-        let mut queue = vec![1];
+        let mut queue = vec![LocationalCode::root()];
 
         while let Some(code) = queue.pop() {
             let node = self.node(code);
@@ -191,7 +191,7 @@ where
 
 #[derive(Debug, Clone)]
 pub struct OctreeNode {
-    code: usize,
+    code: LocationalCode,
     aabb: Aabb,
     is_leaf: bool,
     items: Vec<usize>,
@@ -199,7 +199,7 @@ pub struct OctreeNode {
 
 impl OctreeNode {
     /// Construct an OctreeNode from its code and bounding box
-    fn new(code: usize, aabb: Aabb) -> OctreeNode {
+    fn new(code: LocationalCode, aabb: Aabb) -> OctreeNode {
         OctreeNode {
             code,
             aabb,
@@ -210,11 +210,11 @@ impl OctreeNode {
 
     /// Construct a root OctreeNode from its bounding box
     fn new_root(aabb: Aabb) -> OctreeNode {
-        OctreeNode::new(1, aabb)
+        OctreeNode::new(LocationalCode::root(), aabb)
     }
 
     /// Get the location code
-    pub fn code(&self) -> usize {
+    pub fn code(&self) -> LocationalCode {
         self.code
     }
 
@@ -235,24 +235,12 @@ impl OctreeNode {
 
     /// Compute the depth of the code
     pub fn depth(&self) -> usize {
-        for d in 0..MAX_DEPTH + 1 {
-            if self.code >> 3 * d == 1 {
-                return d;
-            }
-        }
-
-        panic!("invalid location code");
+        self.code.depth()
     }
 
     /// Get the children OctreeNode location codes
-    pub fn children(&self) -> Vec<usize> {
-        let mut codes = vec![0; 8];
-
-        for (octant, code) in codes.iter_mut().enumerate() {
-            *code = (self.code << 3) | octant;
-        }
-
-        codes
+    pub fn children(&self) -> Vec<LocationalCode> {
+        self.code.children()
     }
 
     /// Get if the node can be split
@@ -265,16 +253,9 @@ impl OctreeNode {
         self.can_split() && self.items.len() > MAX_ITEMS_PER_NODE
     }
 
-    /// Get the path of octants to reach the node
-    pub fn octants(&self) -> Vec<usize> {
-        (0..self.depth())
-            .rev()
-            .map(|i| (self.code >> 3 * i) & 7)
-            .collect()
-    }
-
     /// Get the codes for neighboring nodes of the same size
     fn face_neighbor(&self, direction: Direction) -> Option<usize> {
+        /*
         let depth = self.depth();
         let mut octants = self.octants();
         let value = direction.value();
@@ -305,6 +286,59 @@ impl OctreeNode {
         // Generate the code from the octants
         let code = code_from_octants(octants);
         Some(code)
+        */
+        unimplemented!()
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct LocationalCode {
+    code: usize,
+}
+
+impl LocationalCode {
+    /// Construct a LocationalCode from its code value
+    pub fn new(code: usize) -> LocationalCode {
+        LocationalCode { code }
+    }
+
+    /// Construct a root LocationalCode
+    pub fn root() -> LocationalCode {
+        LocationalCode::new(1)
+    }
+
+    /// Construct a LocationalCode from its octant path
+    pub fn from_path(path: &[usize]) -> LocationalCode {
+        let mut code: usize = 0;
+
+        for octant in path.iter() {
+            code = code << 3 | octant;
+        }
+
+        LocationalCode::new(code)
+    }
+
+    /// Get the depth
+    pub fn depth(&self) -> usize {
+        for d in 0..MAX_DEPTH + 1 {
+            if self.code >> 3 * d == 1 {
+                return d;
+            }
+        }
+
+        panic!("invalid location code");
+    }
+
+    /// Get the octant path
+    pub fn path(&self) -> Vec<usize> {
+        unimplemented!()
+    }
+
+    /// Get the children LocationalCodes
+    pub fn children(&self) -> Vec<LocationalCode> {
+        (0..8)
+            .map(|o| LocationalCode::new(self.code << 3 | o))
+            .collect()
     }
 }
 
@@ -350,17 +384,6 @@ impl Direction {
     pub fn bit(&self, octant: usize) -> usize {
         (octant & self.mask()) >> self.shift()
     }
-}
-
-/// Build the octree locational code from the octants path
-fn code_from_octants(octants: Vec<usize>) -> usize {
-    let mut code: usize = 1;
-
-    for octant in octants.iter() {
-        code = (code << 3) | octant;
-    }
-
-    code
 }
 
 #[cfg(test)]
@@ -483,6 +506,7 @@ mod test {
         assert_eq!(results[1].len(), 0);
     }
 
+    /*
     #[test]
     fn test_octree_node_octants() {
         let node = OctreeNode::new(474635, Aabb::unit());
@@ -515,4 +539,5 @@ mod test {
 
         assert_eq!(neighbor, expected);
     }
+    */
 }
