@@ -264,6 +264,103 @@ impl OctreeNode {
     fn should_split(&self) -> bool {
         self.can_split() && self.items.len() > MAX_ITEMS_PER_NODE
     }
+
+    /// Get the path of octants to reach the node
+    pub fn octants(&self) -> Vec<usize> {
+        (0..self.depth())
+            .rev()
+            .map(|i| (self.code >> 3 * i) & 7)
+            .collect()
+    }
+
+    /// Get the codes for neighboring nodes of the same size
+    fn face_neighbor(&self, direction: Direction) -> Option<usize> {
+        let depth = self.depth();
+        let mut octants = self.octants();
+        let value = direction.value();
+        let bits = octants.iter().map(|&o| direction.bit(o));
+
+        // If all bits in the nodes path are on the same face as the
+        // direction, then no neighbor exists.
+        if bits.sum::<usize>() == depth * value {
+            return None;
+        }
+
+        // Scanning from right to left, find the first bit that matches
+        // the inverse of the direction's value. Reset the bit to the
+        // direction's value and set all remaining octants to the inverse
+        // of the direction's value.
+        let mask = direction.mask();
+        let shift = direction.shift();
+
+        for octant in octants.iter_mut().rev() {
+            if direction.bit(*octant) == 1 - value {
+                *octant = (*octant & !mask) | (value << shift);
+                break;
+            }
+
+            *octant = (*octant & !mask) | ((1 - value) << shift);
+        }
+
+        // Generate the code from the octants
+        let code = code_from_octants(octants);
+        Some(code)
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum Direction {
+    East,
+    West,
+    North,
+    South,
+    Front,
+    Back,
+}
+
+impl Direction {
+    /// Get the bit shift for the significant bit
+    pub fn shift(&self) -> usize {
+        match self {
+            Direction::East | Direction::West => 2,
+            Direction::North | Direction::South => 1,
+            Direction::Front | Direction::Back => 0,
+        }
+    }
+
+    /// Get the bit mask for the significant bit
+    pub fn mask(&self) -> usize {
+        match self {
+            Direction::East | Direction::West => 4,
+            Direction::North | Direction::South => 2,
+            Direction::Front | Direction::Back => 1,
+        }
+    }
+
+    /// Get the bit value for the significant bit which represents the
+    /// halfspace (0 or 1) of the octant
+    pub fn value(&self) -> usize {
+        match self {
+            Direction::West | Direction::South | Direction::Front => 0,
+            Direction::East | Direction::North | Direction::Back => 1,
+        }
+    }
+
+    /// Get the value of the significant bit
+    pub fn bit(&self, octant: usize) -> usize {
+        (octant & self.mask()) >> self.shift()
+    }
+}
+
+/// Build the octree locational code from the octants path
+fn code_from_octants(octants: Vec<usize>) -> usize {
+    let mut code: usize = 1;
+
+    for octant in octants.iter() {
+        code = (code << 3) | octant;
+    }
+
+    code
 }
 
 #[cfg(test)]
@@ -384,5 +481,38 @@ mod test {
         assert_eq!(results.len(), 2);
         assert_eq!(results[0].len(), 11);
         assert_eq!(results[1].len(), 0);
+    }
+
+    #[test]
+    fn test_octree_node_octants() {
+        let node = OctreeNode::new(474635, Aabb::unit());
+        let octants = node.octants();
+
+        assert_eq!(octants.len(), 6);
+        assert_eq!(octants[0], 6);
+        assert_eq!(octants[1], 3);
+        assert_eq!(octants[2], 7);
+        assert_eq!(octants[3], 0);
+        assert_eq!(octants[4], 1);
+        assert_eq!(octants[5], 3);
+    }
+
+    #[test]
+    fn test_octree_node_face_neighbor_west() {
+        let node = OctreeNode::new(474635, Aabb::unit());
+        let neighbor = node.face_neighbor(Direction::West).unwrap();
+
+        assert_eq!(neighbor, 472879);
+    }
+
+    #[test]
+    fn test_octree_node_face_neighbor_north() {
+        let code = code_from_octants(vec![6, 1, 5, 6, 2]);
+        let expected = code_from_octants(vec![6, 1, 7, 4, 0]);
+
+        let node = OctreeNode::new(code, Aabb::unit());
+        let neighbor = node.face_neighbor(Direction::North).unwrap();
+
+        assert_eq!(neighbor, expected);
     }
 }
