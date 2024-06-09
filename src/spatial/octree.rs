@@ -259,14 +259,11 @@ impl OctreeNode {
     }
 
     /// Get the codes for neighboring nodes of the same size
-    pub fn face_neighbor(&self, _direction: Direction) -> Option<usize> {
-        unimplemented!();
-
-        /*
+    pub fn face_neighbor(&self, direction: Direction) -> Option<usize> {
         let depth = self.depth();
-        let mut octants = self.octants();
+        let mut path = self.path();
         let value = direction.value();
-        let bits = octants.iter().map(|&o| direction.bit(o));
+        let bits = path.iter().map(|&o| direction.bit(o));
 
         // If all bits in the nodes path are on the same face as the
         // direction, then no neighbor exists.
@@ -281,7 +278,7 @@ impl OctreeNode {
         let mask = direction.mask();
         let shift = direction.shift();
 
-        for octant in octants.iter_mut().rev() {
+        for octant in path.iter_mut().rev() {
             if direction.bit(*octant) == 1 - value {
                 *octant = (*octant & !mask) | (value << shift);
                 break;
@@ -290,10 +287,7 @@ impl OctreeNode {
             *octant = (*octant & !mask) | ((1 - value) << shift);
         }
 
-        // Generate the code from the octants
-        let code = code_from_octants(octants);
-        Some(code)
-        */
+        Some(usize::from_path(&path))
     }
 }
 
@@ -314,7 +308,7 @@ trait LocationalCode {
 impl LocationalCode for usize {
     /// Construct a LocationalCode from its octant path
     fn from_path(path: &[usize]) -> Self {
-        let mut code: usize = 0;
+        let mut code: usize = 1;
 
         for octant in path.iter() {
             code = code << 3 | octant;
@@ -512,38 +506,87 @@ mod test {
         assert_eq!(results[1].len(), 0);
     }
 
-    /*
     #[test]
-    fn test_octree_node_octants() {
-        let node = OctreeNode::new(474635, Aabb::unit());
-        let octants = node.octants();
+    fn test_octree_node_face_neighbor_east() {
+        let path = vec![7, 0, 4, 5, 5];
+        let code = usize::from_path(&path);
+        let node = OctreeNode::new(code, Aabb::unit());
 
-        assert_eq!(octants.len(), 6);
-        assert_eq!(octants[0], 6);
-        assert_eq!(octants[1], 3);
-        assert_eq!(octants[2], 7);
-        assert_eq!(octants[3], 0);
-        assert_eq!(octants[4], 1);
-        assert_eq!(octants[5], 3);
+        let expected_path = vec![7, 4, 0, 1, 1];
+        let expected_code = usize::from_path(&expected_path);
+
+        let neighbor = node.face_neighbor(Direction::East).unwrap();
+
+        assert_eq!(neighbor, expected_code);
     }
 
     #[test]
     fn test_octree_node_face_neighbor_west() {
-        let node = OctreeNode::new(474635, Aabb::unit());
+        let path = vec![6, 3, 7, 0, 1, 3];
+        let code = usize::from_path(&path);
+        let node = OctreeNode::new(code, Aabb::unit());
+
+        let expected_path = vec![6, 3, 3, 4, 5, 7];
+        let expected_code = usize::from_path(&expected_path);
+
         let neighbor = node.face_neighbor(Direction::West).unwrap();
 
-        assert_eq!(neighbor, 472879);
+        assert_eq!(neighbor, expected_code);
+    }
+
+    #[test]
+    fn test_octree_node_face_neighbor_south() {
+        let path = vec![7, 4, 0, 1, 1];
+        let code = usize::from_path(&path);
+        let node = OctreeNode::new(code, Aabb::unit());
+
+        let expected_path = vec![5, 6, 2, 3, 3];
+        let expected_code = usize::from_path(&expected_path);
+
+        let neighbor = node.face_neighbor(Direction::South).unwrap();
+
+        assert_eq!(neighbor, expected_code);
     }
 
     #[test]
     fn test_octree_node_face_neighbor_north() {
-        let code = code_from_octants(vec![6, 1, 5, 6, 2]);
-        let expected = code_from_octants(vec![6, 1, 7, 4, 0]);
-
+        let path = vec![6, 1, 5, 6, 2];
+        let code = usize::from_path(&path);
         let node = OctreeNode::new(code, Aabb::unit());
+
+        let expected_path = vec![6, 1, 7, 4, 0];
+        let expected_code = usize::from_path(&expected_path);
+
         let neighbor = node.face_neighbor(Direction::North).unwrap();
 
-        assert_eq!(neighbor, expected);
+        assert_eq!(neighbor, expected_code);
     }
-    */
+
+    #[test]
+    fn test_octree_node_face_neighbor_front() {
+        let path = vec![7, 0, 5, 4, 4];
+        let code = usize::from_path(&path);
+        let node = OctreeNode::new(code, Aabb::unit());
+
+        let expected_path = vec![7, 0, 4, 5, 5];
+        let expected_code = usize::from_path(&expected_path);
+
+        let neighbor = node.face_neighbor(Direction::Front).unwrap();
+
+        assert_eq!(neighbor, expected_code);
+    }
+
+    #[test]
+    fn test_octree_node_face_neighbor_back() {
+        let path = vec![7, 4, 5, 0, 3, 1];
+        let code = usize::from_path(&path);
+        let node = OctreeNode::new(code, Aabb::unit());
+
+        let expected_path = vec![7, 4, 5, 1, 2, 0];
+        let expected_code = usize::from_path(&expected_path);
+
+        let neighbor = node.face_neighbor(Direction::Back).unwrap();
+
+        assert_eq!(neighbor, expected_code);
+    }
 }
