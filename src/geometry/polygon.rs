@@ -1,4 +1,4 @@
-use crate::geometry::{Clip, Distance, Intersection, Line, Plane, Vector3};
+use crate::geometry::{Aabb, Clip, Distance, Intersection, Line, Plane, Vector3};
 
 #[derive(Debug, Clone)]
 pub struct Polygon {
@@ -28,6 +28,24 @@ impl Polygon {
         }
 
         lines
+    }
+}
+
+impl Clip<Aabb> for Polygon {
+    type Output = Polygon;
+
+    fn clip(&self, aabb: &Aabb) -> Option<Self::Output> {
+        let mut polygon = self.clone();
+
+        for plane in aabb.planes() {
+            if let Some(clipped) = polygon.clip(&plane) {
+                polygon = clipped;
+            } else {
+                return None;
+            }
+        }
+
+        Some(polygon)
     }
 }
 
@@ -66,7 +84,7 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_clip_plane_polygon_ok_quad() {
+    fn test_clip_polygon_plane_ok_quad() {
         let p = Vector3::new(0., 0., 0.);
         let q = Vector3::new(1., 0., 0.);
         let r = Vector3::new(1., 1., 0.);
@@ -85,7 +103,7 @@ mod test {
     }
 
     #[test]
-    fn test_clip_plane_polygon_ok_triangle() {
+    fn test_clip_polygon_plane_ok_triangle() {
         let p = Vector3::new(0., 0., 0.);
         let q = Vector3::new(1., 0., 0.);
         let r = Vector3::new(1., 1., 0.);
@@ -100,5 +118,69 @@ mod test {
         assert_eq!(result.vertices[0], Vector3::new(0., 0., 0.));
         assert_eq!(result.vertices[1], Vector3::new(0.5, 0., 0.));
         assert_eq!(result.vertices[2], Vector3::new(0.5, 0.5, 0.));
+    }
+
+    #[test]
+    fn test_clip_polygon_plane_ok_full() {
+        let p = Vector3::new(0., 0., 0.);
+        let q = Vector3::new(1., 0., 0.);
+        let r = Vector3::new(1., 1., 0.);
+        let polygon = Polygon::new(vec![p, q, r]);
+
+        let normal = Vector3::new(-1., 0., 0.);
+        let plane = Plane::new(normal, 2.);
+
+        let result = polygon.clip(&plane).unwrap();
+
+        assert_eq!(result.vertices.len(), 3);
+        assert_eq!(result.vertices[0], p);
+        assert_eq!(result.vertices[1], q);
+        assert_eq!(result.vertices[2], r);
+    }
+
+    #[test]
+    fn test_clip_polygon_plane_fail() {
+        let p = Vector3::new(0., 0., 0.);
+        let q = Vector3::new(1., 0., 0.);
+        let r = Vector3::new(1., 1., 0.);
+        let polygon = Polygon::new(vec![p, q, r]);
+
+        let normal = Vector3::new(1., 0., 0.);
+        let plane = Plane::new(normal, -2.);
+
+        let result = polygon.clip(&plane);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_clip_polygon_aabb_ok() {
+        let p = Vector3::new(0., 0., 0.5);
+        let q = Vector3::new(1., 0., 0.5);
+        let r = Vector3::new(1., 1., 0.5);
+        let polygon = Polygon::new(vec![p, q, r]);
+
+        let result = polygon.clip(&Aabb::unit()).unwrap();
+
+        assert_eq!(result.vertices.len(), 3);
+        assert_eq!(result.vertices[0], Vector3::new(0., 0., 0.5));
+        assert_eq!(result.vertices[1], Vector3::new(0.5, 0., 0.5));
+        assert_eq!(result.vertices[2], Vector3::new(0.5, 0.5, 0.5));
+    }
+
+    #[test]
+    fn test_clip_polygon_aabb_ok_quad() {
+        let p = Vector3::new(0., 0., 0.5);
+        let q = Vector3::new(1., 0., 0.5);
+        let r = Vector3::new(1., 1., 0.5);
+        let s = Vector3::new(0., 1., 0.5);
+        let polygon = Polygon::new(vec![p, q, r, s]);
+
+        let result = polygon.clip(&Aabb::unit()).unwrap();
+
+        assert_eq!(result.vertices.len(), 4);
+        assert_eq!(result.vertices[0], Vector3::new(0., 0., 0.5));
+        assert_eq!(result.vertices[1], Vector3::new(0.5, 0., 0.5));
+        assert_eq!(result.vertices[2], Vector3::new(0.5, 0.5, 0.5));
+        assert_eq!(result.vertices[3], Vector3::new(0., 0.5, 0.5));
     }
 }
