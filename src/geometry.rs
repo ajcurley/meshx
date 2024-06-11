@@ -10,7 +10,7 @@ pub mod vector3;
 
 // Re-exports
 pub use aabb::Aabb;
-pub use collision::Intersects;
+pub use collision::{Clip, Distance, Intersection, Intersects};
 pub use line::Line;
 pub use plane::Plane;
 pub use polygon::Polygon;

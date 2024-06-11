@@ -1,4 +1,5 @@
-use crate::geometry::Vector3;
+use crate::geometry::collision;
+use crate::geometry::{Distance, Vector3};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Plane {
@@ -29,5 +30,11 @@ impl Plane {
     /// Get the constant
     pub fn d(&self) -> f64 {
         self.d
+    }
+}
+
+impl Distance<Vector3> for Plane {
+    fn distance(&self, v: &Vector3) -> f64 {
+        collision::distance_plane_vector3(self, v)
     }
 }

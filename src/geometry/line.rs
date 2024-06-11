@@ -26,10 +26,10 @@ impl Line {
 impl std::ops::Index<usize> for Line {
     type Output = Vector3;
 
-    fn index(&self, index: usize) -> Self::Output {
+    fn index(&self, index: usize) -> &Self::Output {
         match index {
-            0 => self.p,
-            1 => self.q,
+            0 => &self.p,
+            1 => &self.q,
             _ => panic!("index out of range"),
         }
     }
