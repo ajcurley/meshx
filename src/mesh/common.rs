@@ -1,3 +1,5 @@
+use std::collections::{HashMap, HashSet};
+
 use pyo3::exceptions::PyIndexError;
 use pyo3::prelude::*;
 
@@ -170,6 +172,58 @@ impl Face {
         }
 
         edges
+    }
+
+    /// Merge the face with another face
+    pub fn merge(&self, other: &Face) -> Face {
+        let mut adjacency = HashMap::new();
+
+        for edge in self.edges() {
+            adjacency.insert(edge.p(), HashSet::from([edge.q()]));
+        }
+
+        for edge in other.edges() {
+            let p = edge.p();
+            let q = edge.q();
+            let mut shared = false;
+
+            if let Some(vertices) = adjacency.get_mut(&q) {
+                if vertices.contains(&p) {
+                    vertices.remove(&p);
+                    shared = true;
+                }
+            }
+
+            if !shared {
+                if let Some(vertices) = adjacency.get_mut(&p) {
+                    vertices.insert(q);
+                } else {
+                    adjacency.insert(p, HashSet::from([q]));
+                }
+            }
+        }
+
+        let mut i: usize = *adjacency.keys().next().unwrap();
+        let mut vertices = vec![i];
+
+        while !adjacency.is_empty() {
+            if let Some(nodes) = adjacency.remove(&i) {
+                if nodes.len() != 1 {
+                    panic!("invalid polygon definition");
+                }
+
+                i = *nodes.iter().next().unwrap();
+                vertices.push(i);
+            } else {
+                panic!("unclosed polygon");
+            }
+        }
+
+        if vertices[0] == vertices[vertices.len() - 1] {
+            vertices.pop();
+        }
+
+        Face::new(vertices, self.patch)
     }
 
     /// (Python) Get a vertex index by index
@@ -347,5 +401,24 @@ impl Patch {
     #[setter]
     pub fn set_name(&mut self, name: &str) {
         self.name = name.to_string();
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_merge_face() {
+        let face0 = Face::new(vec![0, 1, 2], None);
+        let face1 = Face::new(vec![1, 3, 2], None);
+
+        let result = face0.merge(&face1);
+
+        assert_eq!(result.vertices.len(), 4);
+        assert_eq!(result.vertices[0], 0);
+        assert_eq!(result.vertices[1], 1);
+        assert_eq!(result.vertices[2], 3);
+        assert_eq!(result.vertices[3], 2);
     }
 }
