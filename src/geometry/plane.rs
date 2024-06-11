@@ -1,5 +1,5 @@
 use crate::geometry::collision;
-use crate::geometry::{Distance, Vector3};
+use crate::geometry::{Distance, Intersection, Line, Vector3};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Plane {
@@ -36,5 +36,13 @@ impl Plane {
 impl Distance<Vector3> for Plane {
     fn distance(&self, v: &Vector3) -> f64 {
         collision::distance_plane_vector3(self, v)
+    }
+}
+
+impl Intersection<Line> for Plane {
+    type Output = Vector3;
+
+    fn intersection(&self, line: &Line) -> Option<Self::Output> {
+        collision::intersection_line_plane(line, self)
     }
 }

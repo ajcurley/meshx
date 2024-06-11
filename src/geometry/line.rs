@@ -1,4 +1,5 @@
-use crate::geometry::Vector3;
+use crate::geometry::collision;
+use crate::geometry::{Intersection, Plane, Vector3};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Line {
@@ -42,5 +43,13 @@ impl std::ops::IndexMut<usize> for Line {
             1 => &mut self.q,
             _ => panic!("index out of range"),
         }
+    }
+}
+
+impl Intersection<Plane> for Line {
+    type Output = Vector3;
+
+    fn intersection(&self, plane: &Plane) -> Option<Self::Output> {
+        collision::intersection_line_plane(self, plane)
     }
 }
