@@ -60,6 +60,10 @@ pub fn merge_faces(faces: &Vec<Face>) -> Face {
         }
     }
 
+    if !adjacency.is_empty() {
+        panic!("some vertices were not merged");
+    }
+
     Face::new(vertices, patch)
 }
 
@@ -99,5 +103,23 @@ mod test {
         assert_eq!(vertices[2], 2);
         assert_eq!(vertices[3], 5);
         assert_eq!(vertices[4], 4);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_merge_faces_invalid_orient() {
+        let face0 = Face::new(vec![0, 1, 2], None);
+        let face1 = Face::new(vec![1, 2, 3], None);
+
+        merge_faces(&vec![face0, face1]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_merge_faces_invalid_disconnected() {
+        let face0 = Face::new(vec![0, 1, 2], None);
+        let face1 = Face::new(vec![3, 4, 5], None);
+
+        merge_faces(&vec![face0, face1]);
     }
 }
