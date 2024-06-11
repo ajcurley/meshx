@@ -1,9 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
-use vtkio::model::*;
-
 use crate::geometry::{Aabb, Triangle, Vector3};
 use crate::mesh::half_edge::HeMesh;
+use crate::mesh::Face;
 use crate::spatial::{Octree, SearchMany};
 
 #[derive(Debug, Clone)]
@@ -32,7 +31,7 @@ impl CartesianMesh {
         self.index_geometry();
         self.generate_blocks();
         self.refine_blocks();
-        self.write_blocks();
+        self.generate_boundary();
     }
 
     /// Index the geometry in an Octree for fast querying.
@@ -133,9 +132,31 @@ impl CartesianMesh {
         println!("Total cells: {}", self.blocks.leaves().len());
     }
 
-    fn write_blocks(&self) {
-        let mut points: Vec<f64> = vec![];
+    /// Generate the boundary cut-cells
+    pub fn generate_boundary(&self) {
+        println!("Generating boundary cut-cells");
+        let leaves = self.blocks.leaves();
+        let queries: Vec<Aabb> = leaves.iter().map(|&c| self.blocks.node(c).aabb()).collect();
+        let results = self.geometry_index.search_many(&queries);
 
+        for items in results.iter() {
+            if !items.is_empty() {
+                println!("-----------------------");
+                for index in items.iter() {
+                    let neighbors = self.geometry.face_neighbors(*index);
+
+                    for neighbor in neighbors.iter() {
+                        if items.contains(neighbor) {
+                            println!("Pair found: ({}, {})", index, neighbor);
+                        }
+                    }
+                }
+
+                if items.len() > 2 {
+                    return;
+                }
+            }
+        }
     }
 }
 
