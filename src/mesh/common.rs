@@ -1,3 +1,5 @@
+use std::collections::{BTreeMap, BTreeSet};
+
 use pyo3::exceptions::PyIndexError;
 use pyo3::prelude::*;
 
@@ -170,6 +172,65 @@ impl Face {
         }
 
         edges
+    }
+
+    /// Merge the face with another face
+    pub fn merge(&self, other: &Face) -> Face {
+        let mut adjacency = BTreeMap::new();
+
+        for edge in self.edges() {
+            adjacency.insert(edge.p(), BTreeSet::from([edge.q()]));
+        }
+
+        for edge in other.edges() {
+            let p = edge.p();
+            let q = edge.q();
+            let mut shared = false;
+
+            if let Some(vertices) = adjacency.get_mut(&q) {
+                if vertices.contains(&p) {
+                    shared = true;
+                    vertices.remove(&p);
+
+                    if vertices.is_empty() {
+                        adjacency.remove(&q);
+                    }
+                }
+            }
+
+            if !shared {
+                if let Some(vertices) = adjacency.get_mut(&p) {
+                    vertices.insert(q);
+                } else {
+                    adjacency.insert(p, BTreeSet::from([q]));
+                }
+            }
+        }
+
+        let mut i: usize = *adjacency.keys().next().unwrap();
+        let mut vertices = vec![i];
+
+        while !adjacency.is_empty() {
+            if let Some(nodes) = adjacency.remove(&i) {
+                if nodes.len() != 1 {
+                    panic!("invalid polygon definition");
+                }
+
+                i = *nodes.iter().next().unwrap();
+
+                if !vertices.is_empty() && i == vertices[0] {
+                    break;
+                }
+
+                vertices.push(i);
+            }
+        }
+
+        if !adjacency.is_empty() {
+            panic!("cannot merge disjointed polygons")
+        }
+
+        Face::new(vertices, self.patch)
     }
 
     /// (Python) Get a vertex index by index
@@ -347,5 +408,56 @@ impl Patch {
     #[setter]
     pub fn set_name(&mut self, name: &str) {
         self.name = name.to_string();
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_merge_face() {
+        let face0 = Face::new(vec![0, 1, 2], None);
+        let face1 = Face::new(vec![1, 3, 2], None);
+
+        let result = face0.merge(&face1);
+
+        assert_eq!(result.vertices.len(), 4);
+        assert_eq!(result.vertices[0], 0);
+        assert_eq!(result.vertices[1], 1);
+        assert_eq!(result.vertices[2], 3);
+        assert_eq!(result.vertices[3], 2);
+    }
+
+    #[test]
+    fn test_merge_face_multiple_edges() {
+        let face0 = Face::new(vec![0, 1, 2, 3], None);
+        let face1 = Face::new(vec![1, 4, 3, 2], None);
+
+        let result = face0.merge(&face1);
+
+        assert_eq!(result.vertices.len(), 4);
+        assert_eq!(result.vertices[0], 0);
+        assert_eq!(result.vertices[1], 1);
+        assert_eq!(result.vertices[2], 4);
+        assert_eq!(result.vertices[3], 3);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_merge_face_invalid_orient() {
+        let face0 = Face::new(vec![0, 1, 2], None);
+        let face1 = Face::new(vec![2, 3, 1], None);
+
+        face0.merge(&face1);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_merge_face_disjointed() {
+        let face0 = Face::new(vec![0, 1, 2], None);
+        let face1 = Face::new(vec![3, 4, 5], None);
+
+        face0.merge(&face1);
     }
 }
