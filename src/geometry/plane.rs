@@ -17,7 +17,7 @@ impl Plane {
     pub fn from_points(p: Vector3, q: Vector3, r: Vector3) -> Plane {
         let u = q - p;
         let v = r - p;
-        let normal = Vector3::cross(&u, &v).unit();
+        let normal = Vector3::cross(&u, &v);
         let d = -Vector3::dot(&normal, &p);
         Plane::new(normal, d)
     }
