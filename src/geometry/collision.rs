@@ -29,3 +29,22 @@ pub use triangle_vector3::intersects_triangle_vector3;
 pub trait Intersects<T> {
     fn intersects(&self, other: &T) -> bool;
 }
+
+/// Compute the intersection geometry.
+pub trait Intersection<T> {
+    type Output;
+
+    fn intersection(&self, other: &T) -> Option<Self::Output>;
+}
+
+/// Compute the minimum distance between two geometries.
+pub trait Distance<T> {
+    fn distance(&self, other: &T) -> f64;
+}
+
+/// Clip a geometry by the cutter geometry.
+pub trait Clip<T> {
+    type Output;
+
+    fn clip(&self, other: &T) -> Option<Self::Output>;
+}
