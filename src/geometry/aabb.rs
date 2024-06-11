@@ -1,7 +1,7 @@
 use pyo3::prelude::*;
 
 use crate::geometry::collision;
-use crate::geometry::{Intersects, Ray, Sphere, Vector3};
+use crate::geometry::{Intersects, Plane, Ray, Sphere, Vector3};
 
 /// Axis-aligned bounding box in three-dimensional Cartesian space.
 #[pyclass]
@@ -67,6 +67,27 @@ impl Aabb {
         Aabb::new(center, h)
     }
 
+    /// Get the inward-facing Planes defining the boundary
+    pub fn planes(&self) -> Vec<Plane> {
+        let min = self.min();
+        let max = self.max();
+        let mut planes = vec![];
+
+        for i in 0..3 {
+            let mut normal = Vector3::zeros();
+            normal[i] = 1.;
+            let plane = Plane::new(normal, -min[i]);
+            planes.push(plane);
+
+            let mut normal = Vector3::zeros();
+            normal[i] = -1.;
+            let plane = Plane::new(normal, max[i]);
+            planes.push(plane);
+        }
+
+        planes
+    }
+
     /// Check for a spatial intersection with an Aabb
     pub fn intersects_aabb(&self, aabb: &Aabb) -> bool {
         self.intersects(aabb)
@@ -109,5 +130,25 @@ impl Intersects<Sphere> for Aabb {
 impl Intersects<Vector3> for Aabb {
     fn intersects(&self, point: &Vector3) -> bool {
         collision::intersects_aabb_vector3(self, point)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_aabb_planes() {
+        use crate::geometry::Distance;
+
+        let planes = Aabb::unit().planes();
+
+        assert_eq!(planes.len(), 6);
+        assert_eq!(planes[0].distance(&Vector3::new(-0.5, 0., 0.)), 0.);
+        assert_eq!(planes[1].distance(&Vector3::new(0.5, 0., 0.)), 0.);
+        assert_eq!(planes[2].distance(&Vector3::new(0., -0.5, 0.)), 0.);
+        assert_eq!(planes[3].distance(&Vector3::new(0., 0.5, 0.)), 0.);
+        assert_eq!(planes[4].distance(&Vector3::new(0., 0., -0.5)), 0.);
+        assert_eq!(planes[5].distance(&Vector3::new(0., 0., 0.5)), 0.);
     }
 }
