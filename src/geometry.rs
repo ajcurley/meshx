@@ -1,5 +1,6 @@
 pub mod aabb;
 pub mod collision;
+pub mod line;
 pub mod plane;
 pub mod polygon;
 pub mod ray;
@@ -10,6 +11,7 @@ pub mod vector3;
 // Re-exports
 pub use aabb::Aabb;
 pub use collision::Intersects;
+pub use line::Line;
 pub use plane::Plane;
 pub use polygon::Polygon;
 pub use ray::Ray;
