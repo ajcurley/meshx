@@ -1,3 +1,4 @@
+use rayon::prelude::*;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::geometry::{Aabb, Intersects};
@@ -158,34 +159,7 @@ where
     Octree<T>: Search<Q>,
 {
     fn search_many(&self, queries: &Vec<Q>) -> Vec<Vec<usize>> {
-        let n_threads = std::thread::available_parallelism().unwrap().get();
-        let n_queries = queries.len();
-        let n = (n_queries as f64 / n_threads as f64).ceil() as usize;
-
-        crossbeam::scope(|scope| {
-            let mut futures = vec![];
-            let mut results = vec![];
-
-            for i in 0..n_threads {
-                let j = (i * n).min(n_queries);
-                let k = (j + n).min(n_queries);
-
-                futures.push(scope.spawn(move |_| {
-                    queries[j..k]
-                        .iter()
-                        .map(|q| self.search(q))
-                        .collect::<Vec<Vec<usize>>>()
-                }))
-            }
-
-            for future in futures {
-                let mut result = future.join().unwrap();
-                results.append(&mut result);
-            }
-
-            results
-        })
-        .unwrap()
+        queries.par_iter().map(|q| self.search(q)).collect()
     }
 }
 

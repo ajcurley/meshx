@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-crossbeam = "0.8"
 flate2 = { version = "1", features = ["zlib"] }
 pyo3 = { version = "0.21", features = ["extension-module"] }
+rayon = "1.10"
 rustc-hash = "1.1"
 
 [dev-dependencies]
