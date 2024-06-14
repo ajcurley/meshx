@@ -349,6 +349,11 @@ impl HeMesh {
         normal.unit()
     }
 
+    /// Compute the unit normals for all faces.
+    pub fn face_normals(&self) -> Vec<Vector3> {
+        (0..self.n_faces()).map(|i| self.face_normal(i)).collect()
+    }
+
     /// Compute the feature edges using a threshold angle in radians. This will
     /// return the pair of half edges defining the edge.
     pub fn feature_edges(&self, angle: f64) -> Vec<(usize, usize)> {
@@ -568,6 +573,40 @@ impl HeMesh {
 
                         for neighbor in self.face_neighbors(current) {
                             if !visited[neighbor] {
+                                queue.push_back(neighbor);
+                            }
+                        }
+                    }
+                }
+
+                components.push(component);
+            }
+        }
+
+        components
+    }
+
+    /// Split the mesh by feature angle (in radians).
+    pub fn split_by_features(&self, angle: f64) -> Vec<Vec<usize>> {
+        let mut components = vec![];
+        let mut visited = vec![false; self.n_faces()];
+        let normals = self.face_normals();
+
+        for next in 0..visited.len() {
+            if !visited[next] {
+                let mut queue = VecDeque::from([next]);
+                let mut component = vec![];
+
+                while let Some(current) = queue.pop_front() {
+                    if !visited[current] {
+                        visited[current] = true;
+                        component.push(current);
+
+                        for neighbor in self.face_neighbors(current) {
+                            let u = &normals[current];
+                            let v = &normals[neighbor];
+
+                            if !visited[neighbor] && Vector3::dot(&u, &v).acos() < angle {
                                 queue.push_back(neighbor);
                             }
                         }
@@ -1062,5 +1101,50 @@ mod test {
         let features = mesh.feature_edges(angle);
 
         assert_eq!(features.len(), 12);
+    }
+
+    #[test]
+    fn test_split_by_features_box_triangles() {
+        let path = "tests/fixtures/box.obj";
+        let mesh = HeMesh::from_obj(&path).unwrap();
+
+        let angle = 30. * std::f64::consts::PI / 180.;
+        let components = mesh.split_by_features(angle);
+
+        assert_eq!(components.len(), 6);
+        assert_eq!(components[0], vec![0, 1]);
+        assert_eq!(components[1], vec![2, 3]);
+        assert_eq!(components[2], vec![4, 5]);
+        assert_eq!(components[3], vec![6, 7]);
+        assert_eq!(components[4], vec![8, 9]);
+        assert_eq!(components[5], vec![10, 11]);
+    }
+
+    #[test]
+    fn test_split_by_features_box_quads() {
+        let path = "tests/fixtures/box_quads.obj";
+        let mesh = HeMesh::from_obj(&path).unwrap();
+
+        let angle = 30. * std::f64::consts::PI / 180.;
+        let components = mesh.split_by_features(angle);
+
+        assert_eq!(components.len(), 6);
+        assert_eq!(components[0], vec![0]);
+        assert_eq!(components[1], vec![1]);
+        assert_eq!(components[2], vec![2]);
+        assert_eq!(components[3], vec![3]);
+        assert_eq!(components[4], vec![4]);
+        assert_eq!(components[5], vec![5]);
+    }
+
+    #[test]
+    fn test_split_by_features_sphere() {
+        let path = "tests/fixtures/sphere.obj";
+        let mesh = HeMesh::from_obj(&path).unwrap();
+
+        let angle = 30. * std::f64::consts::PI / 180.;
+        let components = mesh.split_by_features(angle);
+
+        assert_eq!(components.len(), 1);
     }
 }
