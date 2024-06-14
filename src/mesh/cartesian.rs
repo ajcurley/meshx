@@ -1,7 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::geometry::{Aabb, Triangle, Vector3};
+use crate::geometry::{Aabb, Clip, Polygon, Triangle, Vector3};
 use crate::mesh::half_edge::HeMesh;
+use crate::mesh::helpers::merge_faces;
 use crate::mesh::Face;
 use crate::spatial::{Octree, SearchMany};
 
@@ -139,21 +140,21 @@ impl CartesianMesh {
         let queries: Vec<Aabb> = leaves.iter().map(|&c| self.blocks.node(c).aabb()).collect();
         let results = self.geometry_index.search_many(&queries);
 
-        for items in results.iter() {
+        for (i, items) in results.iter().enumerate() {
             if !items.is_empty() {
-                println!("-----------------------");
-                for index in items.iter() {
-                    let neighbors = self.geometry.face_neighbors(*index);
+                let geometry = self.geometry.extract_faces(&items);
 
-                    for neighbor in neighbors.iter() {
-                        if items.contains(neighbor) {
-                            println!("Pair found: ({}, {})", index, neighbor);
-                        }
+                for component in geometry.components() {
+                    let mut faces = vec![];
+
+                    for &index in component.iter() {
+                        let patch = geometry.face(index).patch();
+                        let vertices = geometry.face_vertices(index);
+                        let face = Face::new(vertices, patch);
+                        faces.push(face);
                     }
-                }
 
-                if items.len() > 2 {
-                    return;
+                    let face = merge_faces(&faces);
                 }
             }
         }
@@ -187,14 +188,22 @@ mod test {
 
     #[test]
     fn test_cartesian_generate() {
-        let path_vehicle =
-            "/Users/acurley/projects/github/cfd-toolkit/examples/lmp1/input/vehicle.obj.gz";
+        let path_vehicle = "/Users/acurley/projects/cfd/geometry/lmp1_30_30_v24.obj.gz";
         let path_tunnel =
             "/Users/acurley/projects/github/cfd-toolkit/examples/lmp1/input/tunnel.obj.gz";
 
         let mut geometry = HeMesh::from_obj(&path_vehicle).unwrap();
         let geometry_tunnel = HeMesh::from_obj(&path_tunnel).unwrap();
         geometry.merge(&geometry_tunnel);
+        geometry.orient();
+
+        if !geometry.is_closed() {
+            panic!("geometry must be closed");
+        }
+
+        if !geometry.is_consistent() {
+            panic!("geometry must be consistently oriented");
+        }
 
         let mut config = CartesianMeshConfig::default();
         config.base_size = 3.2512;

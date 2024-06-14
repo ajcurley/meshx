@@ -73,19 +73,21 @@ mod test {
 
     #[test]
     fn test_merge_faces_multiple() {
-        let face0 = Face::new(vec![0, 1, 2], None);
-        let face1 = Face::new(vec![1, 3, 2], None);
-        let face2 = Face::new(vec![1, 4, 3], None);
+        let face0 = Face::new(vec![1, 2, 3], None);
+        let face1 = Face::new(vec![2, 4, 3], None);
+        let face2 = Face::new(vec![1, 3, 5], None);
+        let face3 = Face::new(vec![1, 5, 6], None);
 
-        let result = merge_faces(&vec![face0, face1, face2]);
+        let result = merge_faces(&vec![face0, face1, face2, face3]);
         let vertices = result.vertices();
 
-        assert_eq!(vertices.len(), 5);
-        assert_eq!(vertices[0], 0);
-        assert_eq!(vertices[1], 1);
+        assert_eq!(vertices.len(), 6);
+        assert_eq!(vertices[0], 1);
+        assert_eq!(vertices[1], 2);
         assert_eq!(vertices[2], 4);
         assert_eq!(vertices[3], 3);
-        assert_eq!(vertices[4], 2);
+        assert_eq!(vertices[4], 5);
+        assert_eq!(vertices[5], 6);
     }
 
     #[test]
