@@ -638,6 +638,41 @@ impl HeMesh {
         self.half_edges[index].prev = prev;
         self.half_edges[index].origin = origin;
     }
+
+    /// Calculate the Gaussian curvature at a vertex. This assumes the mesh
+    /// is composed of strictly trianglar faces and is oriented.
+    pub fn curvature(&self, index: usize) -> f64 {
+        let vertex = &self.vertices[index];
+        let mut current = vertex.half_edge;
+        let mut angle = 2. * std::f64::consts::PI;
+        let mut area = 0.;
+
+        loop {
+            let half_edge = &self.half_edges[current];
+            let next = &self.half_edges[half_edge.next];
+            let prev = &self.half_edges[half_edge.prev];
+
+            let p = self.vertices[prev.origin].point;
+            let q = vertex.point;
+            let r = self.vertices[next.origin].point;
+
+            let u = p - q;
+            let v = r - q;
+            let theta = Vector3::angle(&u, &v);
+
+            angle -= theta;
+            area += Vector3::cross(&u, &v).mag() * 0.5;
+
+            let twin = half_edge.twin.expect("mesh must be closed");
+            current = self.half_edges[twin].next;
+
+            if current == vertex.half_edge {
+                break;
+            }
+        }
+
+        3. * angle / area
+    }
 }
 
 #[derive(Debug, Copy, Clone, Default)]
@@ -1146,5 +1181,20 @@ mod test {
         let components = mesh.split_by_features(angle);
 
         assert_eq!(components.len(), 1);
+    }
+
+    #[test]
+    fn test_curvature_sphere() {
+        let path = "tests/fixtures/sphere.obj";
+        let mesh = HeMesh::from_obj(&path).unwrap();
+
+        let indices = vec![0, 14, 34];
+        let expected = vec![3.62774, 4.64894, 4.18384];
+
+        for (i, index) in indices.iter().enumerate() {
+            let curvature = mesh.curvature(*index);
+            let error = (curvature - expected[i]).abs();
+            assert!(error <= 1e-5);
+        }
     }
 }
