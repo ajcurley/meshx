@@ -66,6 +66,31 @@ impl Triangle {
         self.normal().unit()
     }
 
+    /// Compute the centroid.
+    pub fn centroid(&self) -> Vector3 {
+        (self.p + self.q + self.r) / 3.
+    }
+
+    /// Compute the Barycentric coordinate (u, v, w).
+    pub fn barycenter(&self) -> Vector3 {
+        let v0 = self.q - self.p;
+        let v1 = self.r - self.q;
+        let v2 = self.p - self.r;
+
+        let d00 = Vector3::dot(&v0, &v0);
+        let d01 = Vector3::dot(&v0, &v1);
+        let d11 = Vector3::dot(&v1, &v1);
+        let d20 = Vector3::dot(&v2, &v0);
+        let d21 = Vector3::dot(&v2, &v1);
+
+        let d = d00 * d11 - d01 * d01;
+        let v = (d11 * d20 - d01 * d21) / d;
+        let w = (d00 * d21 - d00 * d20) / d;
+        let u = 1. - v - w;
+
+        Vector3::new(u, v, w)
+    }
+
     /// Check for a spatial intersection with an Aabb
     pub fn intersects_aabb(&self, aabb: &Aabb) -> bool {
         self.intersects(aabb)
