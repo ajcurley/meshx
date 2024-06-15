@@ -1,8 +1,9 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 
-use crate::geometry::{Aabb, Polygon, Vector3};
+use crate::geometry::{Aabb, Polygon, Sphere, Vector3, EPSILON};
 use crate::mesh::wavefront::{ObjReader, ObjWriter};
 use crate::mesh::{Edge, Face, Patch, Vertex};
+use crate::spatial::{Octree, SearchMany};
 
 #[derive(Debug, Clone, Default)]
 pub struct HeMesh {
@@ -449,6 +450,65 @@ impl HeMesh {
 
             self.half_edges.push(half_edge)
         }
+    }
+
+    /// Merge vertices within the geometric tolerance. This may result in a
+    /// non-manifold mesh.
+    pub fn merge_vertices(&mut self) {
+        let aabb = self.aabb();
+        let mut octree = Octree::<Vector3>::new(aabb);
+        let mut queries = vec![];
+
+        for vertex in self.vertices.iter() {
+            octree.insert(vertex.point);
+
+            let query = Sphere::new(vertex.point, EPSILON);
+            queries.push(query);
+        }
+
+        let mut indices = BTreeMap::new();
+        let mut lookup = HashMap::new();
+        let mut edges: HashMap<(usize, usize), Vec<usize>> = HashMap::new();
+
+        for (i, items) in octree.search_many(&queries).iter().enumerate() {
+            let index = items.iter().min().unwrap_or(&i);
+            indices.insert(*index, 0);
+            lookup.insert(i, *index);
+        }
+
+        for (i, (index, value)) in indices.iter_mut().enumerate() {
+            self.vertices[i] = self.vertices[*index];
+            *value = i;
+        }
+
+        for half_edge in self.half_edges.iter_mut() {
+            (*half_edge).origin = indices[&lookup[&half_edge.origin]];
+        }
+
+        for (i, half_edge) in self.half_edges.iter().enumerate() {
+            if half_edge.is_boundary() {
+                let j = half_edge.origin;
+                let k = self.half_edges[half_edge.next].origin;
+
+                edges
+                    .entry((j.min(k), j.max(k)))
+                    .and_modify(|p| p.push(i))
+                    .or_insert(vec![i]);
+            }
+        }
+
+        for (_, shared) in edges.iter() {
+            if shared.len() > 2 {
+                panic!("non-manifold mesh");
+            }
+
+            if shared.len() == 2 {
+                self.half_edges[shared[0]].twin = Some(shared[1]);
+                self.half_edges[shared[1]].twin = Some(shared[0]);
+            }
+        }
+
+        self.vertices.truncate(indices.len());
     }
 
     /// Combine patches with the same name explicitly.
@@ -1221,5 +1281,21 @@ mod test {
             let error = (curvature - expected[i]).abs();
             assert!(error <= 1e-5);
         }
+    }
+
+    #[test]
+    fn test_merge_vertices() {
+        let path = "tests/fixtures/polygons.obj";
+        let mut mesh = HeMesh::from_obj(&path).unwrap();
+
+        assert_eq!(mesh.n_vertices(), 214);
+        assert_eq!(mesh.n_faces(), 59);
+        assert_eq!(mesh.components().len(), 59);
+
+        mesh.merge_vertices();
+
+        assert_eq!(mesh.n_vertices(), 85);
+        assert_eq!(mesh.n_faces(), 59);
+        assert_eq!(mesh.components().len(), 1);
     }
 }
