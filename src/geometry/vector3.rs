@@ -52,7 +52,7 @@ impl Vector3 {
     /// Compute the angle (in radians) between u and v
     #[staticmethod]
     pub fn angle(u: &Vector3, v: &Vector3) -> f64 {
-        (Vector3::dot(u, v) / (u.mag() * v.mag())).acos()
+        (Vector3::dot(u, v) / (u.mag() * v.mag())).clamp(-1., 1.).acos()
     }
 
     /// Get the x-component
