@@ -20,4 +20,4 @@ pub use triangle::Triangle;
 pub use vector3::Vector3;
 
 /// Geometric tolerance
-const EPSILON: f64 = 1.0e-8;
+pub const EPSILON: f64 = 1.0e-8;
