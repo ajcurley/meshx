@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use crate::geometry::{Aabb, Vector3};
+use crate::geometry::{Aabb, Polygon, Vector3};
 use crate::mesh::wavefront::{ObjReader, ObjWriter};
 use crate::mesh::{Edge, Face, Patch, Vertex};
 
@@ -82,6 +82,31 @@ impl HeMesh {
         }
 
         mesh
+    }
+
+    /// Construct a HeMesh from a slice of Polygons. This will not remove the
+    /// duplicate vertices.
+    pub fn from_polygons(polygons: &[Polygon]) -> HeMesh {
+        let mut vertices = vec![];
+        let mut faces = vec![];
+        let patches = vec![];
+
+        for polygon in polygons.iter() {
+            let mut face_vertices = vec![];
+
+            for vertex in polygon.vertices().iter() {
+                let n = vertices.len();
+                face_vertices.push(n);
+
+                let vertex = Vertex::from(*vertex);
+                vertices.push(vertex);
+            }
+
+            let face = Face::new(face_vertices, None);
+            faces.push(face);
+        }
+
+        HeMesh::new(&vertices, &faces, &patches)
     }
 
     /// Import a HeMesh from an OBJ file
