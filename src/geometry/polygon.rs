@@ -1,4 +1,5 @@
-use crate::geometry::{Aabb, Clip, Distance, Intersection, Line, Plane, Vector3};
+use crate::geometry::collision::{Clip, Distance, Intersection, Intersects};
+use crate::geometry::{Aabb, Line, Plane, Triangle, Vector3};
 
 #[derive(Debug, Clone)]
 pub struct Polygon {
@@ -28,6 +29,92 @@ impl Polygon {
         }
 
         lines
+    }
+
+    /// Compute the triangulation of the polygon.
+    pub fn triangulate(&self) -> Vec<Triangle> {
+        if self.vertices.len() < 3 {
+            return vec![];
+        }
+
+        let mut triangles = vec![];
+        let mut remaining: Vec<usize> = (0..self.vertices.len()).collect();
+
+        while remaining.len() > 3 {
+            let n = remaining.len();
+
+            for i in 0..n {
+                if self.is_ear(remaining[i]) {
+                    let j = if i == 0 { n - 1 } else { (i - 1) % n };
+                    let k = (i + 1) % n;
+
+                    let p = self.vertices[remaining[j]];
+                    let q = self.vertices[remaining[i]];
+                    let r = self.vertices[remaining[k]];
+                    let triangle = Triangle::new(p, q, r);
+
+                    triangles.push(triangle);
+                    remaining.remove(i);
+                    break;
+                }
+            }
+        }
+
+        let p = self.vertices[remaining[0]];
+        let q = self.vertices[remaining[1]];
+        let r = self.vertices[remaining[2]];
+        let triangle = Triangle::new(p, q, r);
+        triangles.push(triangle);
+
+        triangles
+    }
+
+    /// Check if the vertex is an ear for triangulation.
+    fn is_ear(&self, index: usize) -> bool {
+        // Compute the indices of the vertices defining the triangle
+        let n = self.vertices.len();
+        let pi = if index == 0 { n - 1 } else { (index - 1) % n };
+        let qi = index;
+        let ri = (index + 1) % n;
+
+        let p = self.vertices[pi];
+        let q = self.vertices[qi];
+        let r = self.vertices[ri];
+
+        // Check if the angle is convex at q
+        let u = p - q;
+        let v = r - q;
+
+        if Vector3::angle(&u, &v) >= std::f64::consts::PI {
+            return false;
+        }
+
+        // Check if any other point in the polygon lies inside the triangle
+        let triangle = Triangle::new(p, q, r);
+
+        for (j, point) in self.vertices.iter().enumerate() {
+            if j != pi && j != qi && j != ri {
+                if triangle.intersects(point) {
+                    return false;
+                }
+            }
+        }
+
+        true
+    }
+}
+
+impl std::ops::Index<usize> for Polygon {
+    type Output = Vector3;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.vertices[index]
+    }
+}
+
+impl std::ops::IndexMut<usize> for Polygon {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.vertices[index]
     }
 }
 
@@ -182,5 +269,65 @@ mod test {
         assert_eq!(result.vertices[1], Vector3::new(0.5, 0., 0.5));
         assert_eq!(result.vertices[2], Vector3::new(0.5, 0.5, 0.5));
         assert_eq!(result.vertices[3], Vector3::new(0., 0.5, 0.5));
+    }
+
+    #[test]
+    fn test_triangulate_polygon_convex() {
+        let v0 = Vector3::new(0., 0., 0.);
+        let v1 = Vector3::new(1., 0., 0.);
+        let v2 = Vector3::new(2., 1., 0.);
+        let v3 = Vector3::new(1.5, 1.5, 0.);
+        let v4 = Vector3::new(-1., 1., 0.);
+
+        let polygon = Polygon::new(vec![v0, v1, v2, v3, v4]);
+        let t0 = Triangle::new(v4, v0, v1);
+        let t1 = Triangle::new(v4, v1, v2);
+        let t2 = Triangle::new(v2, v3, v4);
+
+        let triangles = polygon.triangulate();
+
+        assert_eq!(triangles.len(), 3);
+        assert_eq!(triangles[0], t0);
+        assert_eq!(triangles[1], t1);
+        assert_eq!(triangles[2], t2);
+    }
+
+    #[test]
+    fn test_triangulate_polygon_concave() {
+        let v0 = Vector3::new(0., 0., 0.);
+        let v1 = Vector3::new(1., 0., 0.);
+        let v2 = Vector3::new(2., 1., 0.);
+        let v3 = Vector3::new(1.5, 1.5, 0.);
+        let v4 = Vector3::new(1.2, 0.6, 0.);
+
+        let polygon = Polygon::new(vec![v0, v1, v2, v3, v4]);
+        let t0 = Triangle::new(v4, v0, v1);
+        let t1 = Triangle::new(v2, v3, v4);
+        let t2 = Triangle::new(v1, v2, v4);
+
+        let triangles = polygon.triangulate();
+
+        assert_eq!(triangles.len(), 3);
+        assert_eq!(triangles[0], t0);
+        assert_eq!(triangles[1], t1);
+        assert_eq!(triangles[2], t2);
+    }
+
+    #[test]
+    fn test_triangulate_polygon_nonplanar() {
+        let v0 = Vector3::new(0., 0., 0.);
+        let v1 = Vector3::new(1., 0., 0.);
+        let v2 = Vector3::new(1., 1., 1.);
+        let v3 = Vector3::new(0., 1., 0.);
+
+        let polygon = Polygon::new(vec![v0, v1, v2, v3]);
+
+        let triangles = polygon.triangulate();
+        let t0 = Triangle::new(v3, v0, v1);
+        let t1 = Triangle::new(v1, v2, v3);
+
+        assert_eq!(triangles.len(), 2);
+        assert_eq!(triangles[0], t0);
+        assert_eq!(triangles[1], t1);
     }
 }
