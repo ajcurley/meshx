@@ -11,10 +11,6 @@ pub struct SurfaceMesh {
     patches: Vec<Patch>,
 }
 
-// TODO: possibly implemented as traits
-// Extract
-// Flip
-
 impl SurfaceMesh {
     /// Construct an SurfaceMesh from common mesh elements.
     pub fn new(
