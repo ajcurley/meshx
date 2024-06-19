@@ -100,7 +100,22 @@ impl SurfaceMesh {
 
     /// Compute the axis-aligned bounding box
     pub fn aabb(&self) -> Aabb {
-        unimplemented!();
+        let mut min = Vector3::ones() * std::f64::INFINITY;
+        let mut max = Vector3::ones() * std::f64::NEG_INFINITY;
+
+        for vertex in self.vertices.iter() {
+            for i in 0..3 {
+                if vertex.position[i] < min[i] {
+                    min[i] = vertex.position[i];
+                }
+
+                if vertex.position[i] > max[i] {
+                    max[i] = vertex.position[i];
+                }
+            }
+        }
+
+        Aabb::from_bounds(min, max)
     }
 
     /// Check if the surface mesh is closed
