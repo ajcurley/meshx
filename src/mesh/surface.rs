@@ -105,11 +105,30 @@ impl SurfaceMesh {
 
     /// Check if the surface mesh is closed
     pub fn is_closed(&self) -> bool {
-        unimplemented!();
+        for half_edge in self.half_edges.iter() {
+            if !half_edge.has_twin() {
+                return false;
+            }
+        }
+
+        true
     }
 
     /// Check if the faces of each component are oriented consistently
     pub fn is_consistent(&self) -> bool {
+        for half_edge in self.half_edges.iter() {
+            if let Some(twin) = half_edge.twin() {
+                if half_edge.origin == self[twin].origin {
+                    return false;
+                }
+            }
+        }
+
+        true
+    }
+
+    /// Check if the surface mesh consists of strictly triangle faces.
+    pub fn is_triangle_mesh(&self) -> bool {
         unimplemented!();
     }
 
@@ -156,6 +175,16 @@ impl SurfaceMesh {
     /// Compute the edges whose adjacent faces form an angle greater than
     /// the threshold in radians.
     pub fn feature_edges(&self, _threshold: f64) -> Vec<EdgeHandle> {
+        unimplemented!();
+    }
+
+    /// Compute the unit normals for each face
+    pub fn normals(&self) -> Vec<Vector3> {
+        unimplemented!();
+    }
+
+    /// Compute the Gaussian curvature for each face.
+    pub fn gaussian_curvature(&self) -> Vec<f64> {
         unimplemented!();
     }
 }
