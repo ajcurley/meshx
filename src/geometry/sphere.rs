@@ -8,7 +8,6 @@ pub struct Sphere {
     radius: f64,
 }
 
-#[pymethods]
 impl Sphere {
     /// Construct a Sphere from its center and radius
     pub fn new(center: Vector3, radius: f64) -> Sphere {

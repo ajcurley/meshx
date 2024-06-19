@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 
 use crate::geometry::{Aabb, Polygon, Sphere, Vector3, EPSILON};
 use crate::mesh::wavefront::{ObjReader, ObjWriter};
-use crate::mesh::{Edge, Face, Patch, Vertex};
+use crate::mesh::{Face, Patch, Vertex};
 use crate::spatial::{Octree, SearchMany};
 
 #[derive(Debug, Clone, Default)]
@@ -17,7 +17,7 @@ impl HeMesh {
     /// Construct a HeMesh from its components
     pub fn new(vertices: &Vec<Vertex>, faces: &Vec<Face>, patches: &Vec<Patch>) -> HeMesh {
         let mut mesh = HeMesh::default();
-        let mut half_edges: HashMap<Edge, Vec<usize>> = HashMap::new();
+        let mut half_edges: HashMap<(usize, usize), Vec<usize>> = HashMap::new();
 
         // Index the patches
         for patch in patches.iter() {
@@ -59,7 +59,7 @@ impl HeMesh {
                 // Index the sorted half edge pair to use when updating the
                 // half edge twins and checking for non-manifold edges.
                 half_edges
-                    .entry(edge.sorted())
+                    .entry(edge.as_tuple())
                     .and_modify(|h| h.push(half_edge_id))
                     .or_insert(vec![half_edge_id]);
             }
