@@ -1,11 +1,7 @@
-use pyo3::exceptions::PyIndexError;
-use pyo3::prelude::*;
-
 use crate::geometry::collision;
 use crate::geometry::{Aabb, Intersects, Ray, Sphere, Vector3};
 
 /// Triangle in three-dimensional Cartesian space
-#[pyclass]
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Triangle {
     p: Vector3,
@@ -13,10 +9,8 @@ pub struct Triangle {
     r: Vector3,
 }
 
-#[pymethods]
 impl Triangle {
     /// Construct a Triangle from its vertices p, q, and r
-    #[new]
     pub fn new(p: Vector3, q: Vector3, r: Vector3) -> Triangle {
         Triangle { p, q, r }
     }
@@ -89,46 +83,6 @@ impl Triangle {
         let u = 1. - v - w;
 
         Vector3::new(u, v, w)
-    }
-
-    /// Check for a spatial intersection with an Aabb
-    pub fn intersects_aabb(&self, aabb: &Aabb) -> bool {
-        self.intersects(aabb)
-    }
-
-    /// Check for a spatial intersection with a Ray
-    pub fn intersects_ray(&self, ray: &Ray) -> bool {
-        self.intersects(ray)
-    }
-
-    /// Check for a spatial intersection with a Sphere
-    pub fn intersects_sphere(&self, sphere: &Sphere) -> bool {
-        self.intersects(sphere)
-    }
-
-    /// Check for a spatial intersection with a Triangle
-    pub fn intersects_triangle(&self, triangle: &Triangle) -> bool {
-        self.intersects(triangle)
-    }
-
-    /// (Python) Get a vertex by index
-    pub fn __getitem__(&self, index: usize) -> PyResult<Vector3> {
-        if index >= 3 {
-            return Err(PyIndexError::new_err("index out of range"));
-        }
-
-        Ok(self[index])
-    }
-
-    /// (Python) Set a vertex by index
-    pub fn __setitem__(&mut self, index: usize, value: Vector3) -> PyResult<()> {
-        if index >= 3 {
-            return Err(PyIndexError::new_err("index out of range"));
-        }
-
-        self[index] = value;
-
-        Ok(())
     }
 }
 

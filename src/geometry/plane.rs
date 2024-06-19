@@ -1,25 +1,19 @@
-use pyo3::prelude::*;
-
 use crate::geometry::collision;
 use crate::geometry::{Distance, Intersection, Line, Vector3};
 
 #[derive(Debug, Copy, Clone)]
-#[pyclass]
 pub struct Plane {
     normal: Vector3,
     d: f64,
 }
 
-#[pymethods]
 impl Plane {
     /// Construct a Plane from its normal and constant
-    #[new]
     pub fn new(normal: Vector3, d: f64) -> Plane {
         Plane { normal, d }
     }
 
     /// Construct a Plane from three points
-    #[staticmethod]
     pub fn from_points(p: Vector3, q: Vector3, r: Vector3) -> Plane {
         let u = q - p;
         let v = r - p;
