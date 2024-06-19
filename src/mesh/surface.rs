@@ -94,6 +94,114 @@ impl SurfaceMesh {
         self.patches.len()
     }
 
+    /// Get the neighboring vertices to a vertex
+    pub fn vertex_neighbors(&self, _handle: VertexHandle) -> Vec<VertexHandle> {
+        unimplemented!();
+    }
+
+    /// Get the faces using a vertex
+    pub fn vertex_faces(&self, _handle: VertexHandle) -> Vec<FaceHandle> {
+        unimplemented!();
+    }
+
+    /// Get the incoming half edges using a vertex
+    pub fn vertex_incoming_half_edges(&self, _handle: VertexHandle) -> Vec<HalfEdgeHandle> {
+        unimplemented!();
+    }
+
+    /// Get the outgoing half edges using a vertex
+    pub fn vertex_outgoing_half_edges(&self, _handle: VertexHandle) -> Vec<HalfEdgeHandle> {
+        unimplemented!();
+    }
+
+    /// Get the neighboring faces to a face
+    pub fn face_neighbors(&self, handle: FaceHandle) -> Vec<FaceHandle> {
+        let face = self[handle];
+        let mut current = face.half_edge;
+        let mut neighbors = vec![];
+
+        loop {
+            let half_edge = self[current];
+            current = half_edge.next;
+
+            if let Some(twin) = half_edge.twin {
+                let neighbor = self[twin].face;
+                neighbors.push(neighbor);
+            }
+
+            if current == face.half_edge {
+                break;
+            }
+        }
+
+        neighbors
+    }
+
+    /// Get the vertices of the face
+    pub fn face_vertices(&self, handle: FaceHandle) -> Vec<VertexHandle> {
+        let face = self[handle];
+        let mut current = face.half_edge;
+        let mut vertices = vec![];
+
+        loop {
+            let half_edge = self[current];
+            vertices.push(half_edge.origin);
+            current = half_edge.next;
+
+            if current == face.half_edge {
+                break;
+            }
+        }
+
+        vertices
+    }
+
+    /// Get the half edges of the face
+    pub fn face_half_edges(&self, handle: FaceHandle) -> Vec<HalfEdgeHandle> {
+        let face = self[handle];
+        let mut current = face.half_edge;
+        let mut half_edges = vec![];
+
+        loop {
+            half_edges.push(current);
+            current = self[current].next;
+
+            if current == face.half_edge {
+                break;
+            }
+        }
+
+        half_edges
+    }
+
+    /// Compute the unit normal of the face using Newell's method.
+    pub fn face_normal(&self, handle: FaceHandle) -> Vector3 {
+        let mut normal = Vector3::zeros();
+        let vertices = self.face_vertices(handle);
+        let n = vertices.len();
+
+        for i in 0..n {
+            let j = vertices[i];
+            let k = vertices[(i + 1) % n];
+            let current = self[j].position;
+            let next = self[k].position;
+
+            normal[0] += (current[1] - next[1]) * (current[2] + next[2]);
+            normal[1] += (current[2] - next[2]) * (current[0] + next[0]);
+            normal[2] += (current[0] - next[0]) * (current[1] + next[1]);
+        }
+
+        normal.unit()
+    }
+
+    /// Compute the unit normals of all faces
+    pub fn face_normals(&self) -> Vec<Vector3> {
+        (0..self.number_of_faces())
+            .map(|i| FaceHandle::new(i))
+            .map(|h| self.face_normal(h))
+            .collect()
+    }
+
     /// Compute the axis-aligned bounding box
     pub fn aabb(&self) -> Aabb {
         let mut min = Vector3::ones() * std::f64::INFINITY;
@@ -166,6 +274,11 @@ impl SurfaceMesh {
         unimplemented!();
     }
 
+    /// Remove duplicate faces from the surface mesh.
+    pub fn remove_duplicate_faces(&mut self) {
+        unimplemented!();
+    }
+
     /// Remove degenerate faces from the surface mesh. This may result in
     /// a surface mesh with open edges.
     pub fn remove_degenerate_faces(&mut self) {
@@ -186,11 +299,6 @@ impl SurfaceMesh {
     /// Compute the edges whose adjacent faces form an angle greater than
     /// the threshold in radians.
     pub fn feature_edges(&self, _threshold: f64) -> Vec<EdgeHandle> {
-        unimplemented!();
-    }
-
-    /// Compute the unit normals for each face
-    pub fn normals(&self) -> Vec<Vector3> {
         unimplemented!();
     }
 
