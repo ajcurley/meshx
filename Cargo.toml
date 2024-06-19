@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 flate2 = { version = "1", features = ["zlib"] }
-pyo3 = { version = "0.21", features = ["extension-module"] }
 rayon = "1.10"
 rustc-hash = "1.1"
 
