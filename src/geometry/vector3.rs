@@ -1,11 +1,7 @@
-use pyo3::exceptions::PyIndexError;
-use pyo3::prelude::*;
-
 use crate::geometry::collision;
 use crate::geometry::{Aabb, Distance, Intersects, Plane, Sphere, Triangle};
 
 /// Vector3 in three-dimensional Cartesian space.
-#[pyclass]
 #[derive(Debug, Copy, Clone, Default, PartialEq)]
 pub struct Vector3 {
     x: f64,
@@ -13,34 +9,28 @@ pub struct Vector3 {
     z: f64,
 }
 
-#[pymethods]
 impl Vector3 {
     /// Construct a Vector3 from its components
-    #[new]
     pub fn new(x: f64, y: f64, z: f64) -> Vector3 {
         Vector3 { x, y, z }
     }
 
     /// Construct a Vector3 of all zeros
-    #[staticmethod]
     pub fn zeros() -> Vector3 {
         Vector3::new(0., 0., 0.)
     }
 
     /// Construct a Vector3 of all ones
-    #[staticmethod]
     pub fn ones() -> Vector3 {
         Vector3::new(1., 1., 1.)
     }
 
     /// Compute the vector dot product u * v
-    #[staticmethod]
     pub fn dot(u: &Vector3, v: &Vector3) -> f64 {
         u.x * v.x + u.y * v.y + u.z * v.z
     }
 
     /// Compute the vector cross product u x v
-    #[staticmethod]
     pub fn cross(u: &Vector3, v: &Vector3) -> Vector3 {
         Vector3 {
             x: u.y * v.z - u.z * v.y,
@@ -50,7 +40,6 @@ impl Vector3 {
     }
 
     /// Compute the angle (in radians) between u and v
-    #[staticmethod]
     pub fn angle(u: &Vector3, v: &Vector3) -> f64 {
         (Vector3::dot(u, v) / (u.mag() * v.mag()))
             .clamp(-1., 1.)
@@ -132,86 +121,6 @@ impl Vector3 {
         }
 
         index
-    }
-
-    /// Check for a spatial intersection with an Aabb
-    pub fn intersects_aabb(&self, aabb: &Aabb) -> bool {
-        self.intersects(aabb)
-    }
-
-    /// Check for a spatial intersection with a Sphere
-    pub fn intersects_sphere(&self, sphere: &Sphere) -> bool {
-        self.intersects(sphere)
-    }
-
-    /// (Python) Get the value at the index
-    pub fn __getitem__(&self, index: usize) -> PyResult<f64> {
-        if index >= 3 {
-            return Err(PyIndexError::new_err("index out of range"));
-        }
-
-        Ok(self[index])
-    }
-
-    /// (Python) Set the value at the index
-    pub fn __setitem__(&mut self, index: usize, value: f64) -> PyResult<()> {
-        if index >= 3 {
-            return Err(PyIndexError::new_err("index out of range"));
-        }
-
-        self[index] = value;
-
-        Ok(())
-    }
-
-    /// (Python) Check for equality
-    pub fn __eq__(&self, other: Vector3) -> bool {
-        *self == other
-    }
-
-    /// (Python) Add using the + operator
-    pub fn __add__(&self, other: Vector3) -> Vector3 {
-        *self + other
-    }
-
-    /// (Python) Add using the += operator
-    pub fn __iadd__(&mut self, other: Vector3) {
-        *self += other;
-    }
-
-    /// (Python) Subtract using the - operator
-    pub fn __sub__(&self, other: Vector3) -> Vector3 {
-        *self - other
-    }
-
-    /// (Python) Subtract using the -= operator
-    pub fn __isub__(&mut self, other: Vector3) {
-        *self -= other;
-    }
-
-    /// (Python) Multiply using the * operator
-    pub fn __mul__(&self, other: Vector3) -> Vector3 {
-        *self * other
-    }
-
-    /// (Python) Multiply using the *= operator
-    pub fn __imul__(&mut self, other: Vector3) {
-        *self *= other;
-    }
-
-    /// (Python) Divide using the / operator
-    pub fn __truediv__(&self, other: Vector3) -> Vector3 {
-        *self / other
-    }
-
-    /// (Python) Divide using the /= operator
-    pub fn __itruediv__(&mut self, other: Vector3) {
-        *self /= other;
-    }
-
-    /// (Python) Negate using the - operator
-    pub fn __neg__(&self) -> Vector3 {
-        -(*self)
     }
 }
 
