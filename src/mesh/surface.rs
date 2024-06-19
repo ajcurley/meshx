@@ -198,6 +198,13 @@ impl SurfaceMesh {
     pub fn gaussian_curvature(&self) -> Vec<f64> {
         unimplemented!();
     }
+
+    /// Scale the mesh by a constant factor.
+    pub fn scale(&mut self, factor: f64) {
+        for vertex in self.vertices.iter_mut() {
+            vertex.position *= factor;
+        }
+    }
 }
 
 impl std::ops::Index<VertexHandle> for SurfaceMesh {
