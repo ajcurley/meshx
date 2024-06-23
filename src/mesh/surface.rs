@@ -1,5 +1,7 @@
+use rustc_hash::FxHashMap;
+
 use crate::geometry::{Aabb, Vector3};
-use crate::mesh::common;
+use crate::mesh::common::{Face as CFace, Patch as CPatch, Vertex as CVertex};
 use crate::mesh::wavefront::ObjReader;
 
 #[derive(Debug, Clone, Default)]
@@ -13,12 +15,74 @@ pub struct SurfaceMesh {
 
 impl SurfaceMesh {
     /// Construct an SurfaceMesh from common mesh elements.
-    pub fn new(
-        _vertices: &[common::Vertex],
-        _faces: &[common::Face],
-        _patches: &[common::Patch],
-    ) -> SurfaceMesh {
-        unimplemented!();
+    pub fn new(vertices: &[CVertex], faces: &[CFace], patches: &[CPatch]) -> SurfaceMesh {
+        let mut mesh = SurfaceMesh::default();
+        let mut index_edges: FxHashMap<(usize, usize), Vec<usize>> = FxHashMap::default();
+
+        // Index all the patches.
+        for patch_ in patches.iter() {
+            mesh.patches.push(Patch {
+                name: patch_.name().to_string(),
+            });
+        }
+
+        // Index all the vertices without reference to their originating half
+        // edge. When the half edges are indexed, the origins will be updated.
+        for vertex_ in vertices.iter() {
+            mesh.vertices.push(Vertex {
+                position: (*vertex_).into(),
+                half_edge: HalfEdgeHandle::default(),
+            });
+        }
+
+        // Index all the faces and the half edges defining the face boundaries
+        // without reference to their twin half edges. If the mesh is manifold,
+        // the twin half edges will be updated.
+        for (fi, face_) in faces.iter().enumerate() {
+            let count = mesh.number_of_half_edges();
+            let edges_ = face_.edges();
+            let mut prev = (0..edges_.len()).collect::<Vec<usize>>();
+            let mut next = (0..edges_.len()).collect::<Vec<usize>>();
+            prev.rotate_right(1);
+            next.rotate_left(1);
+
+            for (ei, edge_) in edges_.iter().enumerate() {
+                mesh.half_edges.push(HalfEdge {
+                    origin: VertexHandle::new(edge_[0]),
+                    face: FaceHandle::new(fi),
+                    prev: HalfEdgeHandle::new(count + prev[ei]),
+                    next: HalfEdgeHandle::new(count + next[ei]),
+                    twin: None,
+                });
+
+                mesh.vertices[edge_[0]].half_edge = HalfEdgeHandle::new(count + ei);
+
+                index_edges
+                    .entry(edge_.as_tuple())
+                    .and_modify(|h| h.push(count + ei))
+                    .or_insert(vec![count + ei]);
+            }
+
+            mesh.faces.push(Face {
+                half_edge: HalfEdgeHandle::new(count),
+                patch: PatchHandle::from(face_.patch()),
+            });
+        }
+
+        // Index the half edge twins. If the mesh is not manifold, a half edge
+        // data structure cannot represent the mesh in which case, panic.
+        for (_, shared) in index_edges.iter() {
+            if shared.len() > 2 {
+                panic!("non-manifold mesh found");
+            }
+
+            if shared.len() == 2 {
+                mesh.half_edges[shared[0]].twin = Some(HalfEdgeHandle::new(shared[1]));
+                mesh.half_edges[shared[1]].twin = Some(HalfEdgeHandle::new(shared[0]));
+            }
+        }
+
+        mesh
     }
 
     /// Import a SurfaceMesh from an OBJ/WaveFront file
@@ -422,6 +486,14 @@ pub struct Vertex {
 }
 
 impl Vertex {
+    /// Construct a primitive Vertex
+    pub fn new(position: Vector3) -> Vertex {
+        Vertex {
+            position,
+            half_edge: HalfEdgeHandle::default(),
+        }
+    }
+
     /// Get the position
     pub fn position(&self) -> Vector3 {
         self.position
@@ -569,12 +641,17 @@ impl EdgeHandle {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Patch {
     name: String,
 }
 
 impl Patch {
+    /// Construct a Patch from its name
+    pub fn new(name: String) -> Patch {
+        Patch { name }
+    }
+
     /// Get a borrowed reference to the name
     pub fn name(&self) -> &str {
         &self.name
@@ -588,6 +665,14 @@ impl PatchHandle {
     /// Construct a PatchHandle from an index
     pub fn new(index: usize) -> PatchHandle {
         PatchHandle(index)
+    }
+
+    /// Construct from an optional index
+    pub fn from(index: Option<usize>) -> Option<PatchHandle> {
+        if let Some(index) = index {
+            return Some(PatchHandle::new(index));
+        }
+        None
     }
 
     /// Get the handle index
@@ -604,4 +689,49 @@ pub trait Extract<T> {
 /// Flip an element of the mesh
 pub trait Flip<T> {
     fn flip(&mut self, handle: T);
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_surface_mesh_from_obj() {
+        let path = "tests/fixtures/box.obj";
+        let mesh = SurfaceMesh::from_obj(&path).unwrap();
+
+        assert_eq!(mesh.number_of_vertices(), 8);
+        assert_eq!(mesh.number_of_faces(), 12);
+        assert_eq!(mesh.number_of_half_edges(), 36);
+        assert_eq!(mesh.number_of_patches(), 0);
+    }
+
+    #[test]
+    fn test_surface_mesh_from_obj_gz() {
+        let path = "tests/fixtures/box.obj.gz";
+        let mesh = SurfaceMesh::from_obj(&path).unwrap();
+
+        assert_eq!(mesh.number_of_vertices(), 8);
+        assert_eq!(mesh.number_of_faces(), 12);
+        assert_eq!(mesh.number_of_half_edges(), 36);
+        assert_eq!(mesh.number_of_patches(), 0);
+    }
+
+    #[test]
+    fn test_surface_mesh_from_obj_groups() {
+        let path = "tests/fixtures/box_groups.obj";
+        let mesh = SurfaceMesh::from_obj(&path).unwrap();
+
+        assert_eq!(mesh.number_of_vertices(), 8);
+        assert_eq!(mesh.number_of_faces(), 12);
+        assert_eq!(mesh.number_of_half_edges(), 36);
+        assert_eq!(mesh.number_of_patches(), 6);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_surface_mesh_from_obj_nonmanifold() {
+        let path = "tests/fixtures/box_nonmanifold.obj";
+        SurfaceMesh::from_obj(&path).unwrap();
+    }
 }
