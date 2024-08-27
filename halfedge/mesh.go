@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ajcurley/meshx"
+	"github.com/ajcurley/meshx-go"
 )
 
 // Index-based half edge mesh data structure for manifold polygonal meshes.

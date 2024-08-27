@@ -1,7 +1,7 @@
 package halfedge
 
 import (
-	"github.com/ajcurley/meshx"
+	"github.com/ajcurley/meshx-go"
 )
 
 type Vertex struct {

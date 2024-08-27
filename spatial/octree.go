@@ -3,7 +3,7 @@ package spatial
 import (
 	"errors"
 
-	"github.com/ajcurley/meshx"
+	"github.com/ajcurley/meshx-go"
 )
 
 const (
