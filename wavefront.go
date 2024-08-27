@@ -8,9 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strconv"
-	"strings"
 	"unicode"
 	"unicode/utf8"
 )
@@ -57,20 +55,7 @@ func ReadOBJFromPath(path string) (*OBJReader, error) {
 	}
 	defer file.Close()
 
-	var reader io.Reader
-
-	if strings.ToLower(filepath.Ext(path)) == ".gz" {
-		gzipFile, err := gzip.NewReader(file)
-		if err != nil {
-			return nil, err
-		}
-		defer gzipFile.Close()
-		reader = gzipFile
-	} else {
-		reader = file
-	}
-
-	objReader := NewOBJReader(reader)
+	objReader := NewOBJReader(file)
 
 	if err := objReader.Read(); err != nil {
 		return nil, err
@@ -83,6 +68,21 @@ func ReadOBJFromPath(path string) (*OBJReader, error) {
 func (r *OBJReader) Read() error {
 	count := 1
 	reader := bufio.NewReader(r.reader)
+
+	testBytes, err := reader.Peek(2)
+	if err != nil {
+		return err
+	}
+
+	if testBytes[0] == 31 && testBytes[1] == 139 {
+		gzipFile, err := gzip.NewReader(reader)
+		if err != nil {
+			fmt.Println("Gzip", err)
+			return err
+		}
+		defer gzipFile.Close()
+		reader = bufio.NewReader(gzipFile)
+	}
 
 	for {
 		data, err := reader.ReadBytes('\n')
