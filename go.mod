@@ -1,4 +1,4 @@
-module github.com/ajcurley/meshx
+module github.com/ajcurley/meshx-go
 
 go 1.22.0
 
